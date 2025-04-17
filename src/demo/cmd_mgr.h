@@ -25,9 +25,9 @@ void cmd_mgr_send_arg_cstr(const char *str);
 void cmd_mgr_send_cmd_commit();
 
 void cmd_mgr_proccess_input(const char *buf, size_t len);
-bool cmd_mgr_get_cmd(int16_t *out);
-bool cmd_mgr_get_arg_int(int16_t *out);
-bool cmd_mgr_get_arg_bool(bool *out);
-int cmd_mgr_get_arg_cstr(char *buf, size_t len);
+int16_t cmd_mgr_get_cmd();
+int16_t cmd_mgr_get_arg_int();
+bool cmd_mgr_get_arg_bool();
+size_t cmd_mgr_get_arg_str(char *buf, size_t len);
 
 #endif /* ifndef _CMD_MGR_H_ */

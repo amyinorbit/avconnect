@@ -14,20 +14,30 @@
 #include <serial/serial.h>
 #include "cmd_mgr.h"
 
-static int parse_commands(char *cmd_buf, int size) {
-    while(size > 0) {
-        const char *cmd_end = strchr(cmd_buf, ';');
-        if(cmd_end == NULL)
-            break;
-        
-        int cmd_len = 1 + (int)(cmd_end - cmd_buf);
-        
-        printf("command: %.*s\n", cmd_len, cmd_buf);
-        memmove(cmd_buf, cmd_end+1, size - cmd_len);
-        size -= cmd_len;
-        cmd_buf[size] = '\0';
-    }
-    return size;
+static void process_mux() {
+    char name[32];
+    cmd_mgr_get_arg_str(name, sizeof(name));
+    
+    int16_t button = cmd_mgr_get_arg_int();
+    int16_t value = cmd_mgr_get_arg_int();
+    printf("mux\t%s:%d: %d\n", name, button, value);
+    
+}
+
+static void process_encoder() {
+    char name[32];
+    cmd_mgr_get_arg_str(name, sizeof(name));
+    
+    int16_t value = cmd_mgr_get_arg_int();
+    printf("enc\t%s: %d\n", name, value);
+}
+
+static void process_switch() {
+    char name[32];
+    cmd_mgr_get_arg_str(name, sizeof(name));
+    
+    int16_t value = cmd_mgr_get_arg_int();
+    printf("but\t%s: %d\n", name, value);
 }
 
 int main(int argc, const char **argv) {
@@ -68,10 +78,6 @@ int main(int argc, const char **argv) {
         serial_write(serial, buf, len);
     }
     
-    static const int cap = 512;
-    char cmd_buf[cap+1];
-    int cmd_size = 0;
-    
 
     {
         cmd_mgr_send_cmd_start(2);
@@ -88,15 +94,31 @@ int main(int argc, const char **argv) {
     }
     
     while(1) {
-        int rd = (int)serial_read(serial, cmd_buf + cmd_size, cap - cmd_size);
-        if(rd == 0)
+        char buf[512];
+        size_t len = serial_read(serial, buf, sizeof(buf));
+        if(len == 0)
             continue;
+        cmd_mgr_proccess_input(buf, len);
         
-        cmd_size += rd;
-        cmd_buf[cmd_size] = '\0';
         
-        cmd_size = parse_commands(cmd_buf, cmd_size);
-        
+        int16_t cmd = 0;
+        if((cmd = cmd_mgr_get_cmd()) < 0)
+            continue;
+        switch(cmd) {
+        case 6:
+            process_encoder();
+            break;
+        case 7:
+            process_switch();
+            break;
+        case 10:
+            break;
+        case 28:
+            break;
+        case 30:
+            process_mux();
+            break;
+        }
     }
     
     cmd_mgr_fini();

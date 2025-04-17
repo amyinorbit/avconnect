@@ -8,9 +8,11 @@
  *===--------------------------------------------------------------------------------------------===
 */
 #include "str_buf.h"
-#include <stdio.h>
+#include <assert.h>
 #include <stdarg.h>
-#include <acfutils/safe_alloc.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define STR_BUF_DEFAULT_CAP     (64)
 #define STR_BUF_GROW_FACTOR     (1.4)
@@ -37,15 +39,18 @@ void str_buf_clear(str_buf_t *buf) {
 static void str_buf_ensure(str_buf_t *buf, size_t cap) {
     if(cap <= buf->cap)
         return;
-    size_t new_cap = buf->cap == 0 ? STR_BUF_DEFAULT_CAP : buf->cap;
+    size_t new_cap = buf->cap == 0
+        ? STR_BUF_DEFAULT_CAP
+        : buf->cap;
     while(new_cap < cap)
         new_cap *= STR_BUF_GROW_FACTOR;
     
-    buf->data = safe_realloc(buf->data, new_cap);
+    buf->data = realloc(buf->data, new_cap);
+    assert(buf->data && "failure to allocate data");
     buf->cap = new_cap;
 }
 
-void str_buf_add(str_buf_t *buf, const char *str, size_t len) {
+void str_buf_push_back(str_buf_t *buf, const char *str, size_t len) {
     str_buf_ensure(buf, buf->size + len + 1);
     
     memcpy(buf->data + buf->size, str, len);
@@ -53,9 +58,7 @@ void str_buf_add(str_buf_t *buf, const char *str, size_t len) {
     buf->data[buf->size] = '\0';
 }
 
-void str_buf_printf(str_buf_t *buf, const char *fmt, ...) {
-    
-    
+void str_buf_printf_back(str_buf_t *buf, const char *fmt, ...) {
     va_list args, args_copy;
     va_start(args, fmt);
     va_copy(args_copy, args);
@@ -71,7 +74,14 @@ void str_buf_printf(str_buf_t *buf, const char *fmt, ...) {
     va_end(args);
 }
 
-const char *str_buf_get(const str_buf_t *buf) {
+void str_buf_pop_front(str_buf_t *buf, size_t num) {
+    size_t to_remove = num > buf->size ? buf->size : num;
+    memmove(buf->data, buf->data + to_remove, (buf->size - to_remove));
+    buf->size -= to_remove;
+    buf->data[buf->size] = '\0';
+}
+
+char *str_buf_get(str_buf_t *buf) {
     return buf->data;
 }
 

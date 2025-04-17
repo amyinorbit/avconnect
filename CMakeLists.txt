@@ -14,7 +14,6 @@ option(LIBACFUTILS "Directory where libacfutils is installed" "libacfutils")
 
 find_package(OpenGL REQUIRED)
 use_static_libc()
-find_acfutils(${LIBACFUTILS})
 find_xplane_sdk("${LIBACFUTILS}/SDK")
 
 
