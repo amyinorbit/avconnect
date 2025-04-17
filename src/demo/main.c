@@ -24,6 +24,26 @@ static void commit_cmd(serial_t *serial) {
     serial_write(serial, buf, len);
 }
 
+static void do_light_test() {
+    for(int i = 0; i < 14; ++i) {
+        cmd_mgr_send_cmd_start(27);
+        cmd_mgr_send_arg_int(0);
+        cmd_mgr_send_arg_int(i);
+        cmd_mgr_send_arg_int(1);
+        cmd_mgr_send_cmd_commit();
+        commit_cmd(serial);
+        
+        usleep(100e3);
+        
+        cmd_mgr_send_cmd_start(27);
+        cmd_mgr_send_arg_int(0);
+        cmd_mgr_send_arg_int(i);
+        cmd_mgr_send_arg_int(0);
+        cmd_mgr_send_cmd_commit();
+        commit_cmd(serial);
+    }
+}
+
 static void process_info() {
     cmd_mgr_get_arg_str(NULL, 0);
     char name[64], serial[64];
@@ -80,6 +100,11 @@ static void process_switch() {
     
     int16_t value = cmd_mgr_get_arg_int();
     (void)value;
+    
+    if(strcmp(name, "APR") == 0 && value == 1) {
+        do_light_test();
+    }
+    
 }
 
 
@@ -97,25 +122,6 @@ int main(int argc, const char **argv) {
     }
     
     cmd_mgr_init();
-    
-    for(int i = 0; i < 14; ++i) {
-        cmd_mgr_send_cmd_start(27);
-        cmd_mgr_send_arg_int(0);
-        cmd_mgr_send_arg_int(i);
-        cmd_mgr_send_arg_int(1);
-        cmd_mgr_send_cmd_commit();
-        commit_cmd(serial);
-        
-        usleep(100e3);
-        
-        cmd_mgr_send_cmd_start(27);
-        cmd_mgr_send_arg_int(0);
-        cmd_mgr_send_arg_int(i);
-        cmd_mgr_send_arg_int(0);
-        cmd_mgr_send_cmd_commit();
-        commit_cmd(serial);
-    }
-    
 
     cmd_mgr_send_cmd_start(2);
     cmd_mgr_send_arg_int(8);
