@@ -14,13 +14,36 @@
 #include <serial/serial.h>
 #include "cmd_mgr.h"
 
+static int brightness = 120;
+static serial_t *serial = NULL;
+
+
+static void commit_cmd(serial_t *serial) {
+    char buf[128];
+    size_t len = cmd_mgr_get_output(buf, sizeof(buf));
+    serial_write(serial, buf, len);
+}
+
+static void process_info() {
+    cmd_mgr_get_arg_str(NULL, 0);
+    char name[64], serial[64];
+    cmd_mgr_get_arg_str(name, sizeof(name));
+    cmd_mgr_get_arg_str(serial, sizeof(serial));
+    cmd_mgr_get_arg_str(NULL, 0);
+    cmd_mgr_get_arg_str(NULL, 0);
+    
+    printf("info\t%s %s\n", name, serial);
+}
+
 static void process_mux() {
     char name[32];
     cmd_mgr_get_arg_str(name, sizeof(name));
     
     int16_t button = cmd_mgr_get_arg_int();
     int16_t value = cmd_mgr_get_arg_int();
-    printf("mux\t%s:%d: %d\n", name, button, value);
+    (void)button;
+    (void)value;
+    // printf("mux\t%s:%d: %d\n", name, button, value);
     
 }
 
@@ -29,7 +52,26 @@ static void process_encoder() {
     cmd_mgr_get_arg_str(name, sizeof(name));
     
     int16_t value = cmd_mgr_get_arg_int();
-    printf("enc\t%s: %d\n", name, value);
+    // printf("enc\t%s: %d\n", name, value);
+    
+    if(strcmp(name, "EC_ALT") == 0) {
+        
+        if(value == 0 || value == 1)
+            brightness -= 8;
+        if(value == 2 || value == 3)
+            brightness += 8;
+        
+        if(brightness < 0)
+            brightness = 0;
+        if(brightness > 250)
+            brightness = 250;
+        
+        cmd_mgr_send_cmd_start(2);
+        cmd_mgr_send_arg_int(8);
+        cmd_mgr_send_arg_int(brightness);
+        cmd_mgr_send_cmd_commit();
+        commit_cmd(serial);
+    }
 }
 
 static void process_switch() {
@@ -37,8 +79,9 @@ static void process_switch() {
     cmd_mgr_get_arg_str(name, sizeof(name));
     
     int16_t value = cmd_mgr_get_arg_int();
-    printf("but\t%s: %d\n", name, value);
+    (void)value;
 }
+
 
 int main(int argc, const char **argv) {
     if(argc != 2) {
@@ -47,7 +90,7 @@ int main(int argc, const char **argv) {
     }
     
     const char *address = argv[1];
-    serial_t *serial = serial_open(address, SERIAL_BAUDS_115200);
+    serial = serial_open(address, SERIAL_BAUDS_115200);
     if(serial == NULL) {
         fprintf(stderr, "unable to open serial port\n");
         return -1;
@@ -56,16 +99,13 @@ int main(int argc, const char **argv) {
     cmd_mgr_init();
     
     for(int i = 0; i < 14; ++i) {
-        char buf[128];
-        
         cmd_mgr_send_cmd_start(27);
         cmd_mgr_send_arg_int(0);
         cmd_mgr_send_arg_int(i);
         cmd_mgr_send_arg_int(1);
         cmd_mgr_send_cmd_commit();
+        commit_cmd(serial);
         
-        size_t len = cmd_mgr_get_output(buf, sizeof(buf));
-        serial_write(serial, buf, len);
         usleep(100e3);
         
         cmd_mgr_send_cmd_start(27);
@@ -73,29 +113,26 @@ int main(int argc, const char **argv) {
         cmd_mgr_send_arg_int(i);
         cmd_mgr_send_arg_int(0);
         cmd_mgr_send_cmd_commit();
-        
-        len = cmd_mgr_get_output(buf, sizeof(buf));
-        serial_write(serial, buf, len);
+        commit_cmd(serial);
     }
     
 
-    {
-        cmd_mgr_send_cmd_start(2);
-        cmd_mgr_send_arg_int(8);
-        cmd_mgr_send_arg_int(250);
-        cmd_mgr_send_cmd_commit();
-    
-        cmd_mgr_send_cmd_start(12);
-        cmd_mgr_send_cmd_commit();
+    cmd_mgr_send_cmd_start(2);
+    cmd_mgr_send_arg_int(8);
+    cmd_mgr_send_arg_int(250);
+    cmd_mgr_send_cmd_commit();
 
-        char buf[64];
-        size_t len = cmd_mgr_get_output(buf, sizeof(buf));
-        serial_write(serial, buf, len);
-    }
+    cmd_mgr_send_cmd_start(9);
+    cmd_mgr_send_cmd_commit();
+    commit_cmd(serial);
     
     while(1) {
         char buf[512];
-        size_t len = serial_read(serial, buf, sizeof(buf));
+        int len = serial_read(serial, buf, sizeof(buf));
+        if(len < 0) {
+            fprintf(stderr, "serial device disconnected\n");
+            break;
+        }
         if(len == 0)
             continue;
         cmd_mgr_proccess_input(buf, len);
@@ -112,6 +149,7 @@ int main(int argc, const char **argv) {
             process_switch();
             break;
         case 10:
+            process_info();
             break;
         case 28:
             break;

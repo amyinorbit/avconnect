@@ -17,17 +17,17 @@
 void cmd_mgr_init();
 void cmd_mgr_fini();
 
-size_t cmd_mgr_get_output(char *out, size_t cap);
+int cmd_mgr_get_output(char *out, int cap);
 void cmd_mgr_send_cmd_start(int16_t cmd);
 void cmd_mgr_send_arg_int(int16_t arg);
 void cmd_mgr_send_arg_bool(bool arg);
 void cmd_mgr_send_arg_cstr(const char *str);
 void cmd_mgr_send_cmd_commit();
 
-void cmd_mgr_proccess_input(const char *buf, size_t len);
+void cmd_mgr_proccess_input(const char *buf, int len);
 int16_t cmd_mgr_get_cmd();
 int16_t cmd_mgr_get_arg_int();
 bool cmd_mgr_get_arg_bool();
-size_t cmd_mgr_get_arg_str(char *buf, size_t len);
+int cmd_mgr_get_arg_str(char *buf, int len);
 
 #endif /* ifndef _CMD_MGR_H_ */

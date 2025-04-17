@@ -36,10 +36,10 @@ void str_buf_clear(str_buf_t *buf) {
     buf->data[0] = '\0';
 }
 
-static void str_buf_ensure(str_buf_t *buf, size_t cap) {
+static void str_buf_ensure(str_buf_t *buf, int cap) {
     if(cap <= buf->cap)
         return;
-    size_t new_cap = buf->cap == 0
+    int new_cap = buf->cap == 0
         ? STR_BUF_DEFAULT_CAP
         : buf->cap;
     while(new_cap < cap)
@@ -50,7 +50,7 @@ static void str_buf_ensure(str_buf_t *buf, size_t cap) {
     buf->cap = new_cap;
 }
 
-void str_buf_push_back(str_buf_t *buf, const char *str, size_t len) {
+void str_buf_push_back(str_buf_t *buf, const char *str, int len) {
     str_buf_ensure(buf, buf->size + len + 1);
     
     memcpy(buf->data + buf->size, str, len);
@@ -63,7 +63,7 @@ void str_buf_printf_back(str_buf_t *buf, const char *fmt, ...) {
     va_start(args, fmt);
     va_copy(args_copy, args);
     
-    size_t len = vsnprintf(NULL, 0, fmt, args_copy);
+    int len = (int)vsnprintf(NULL, 0, fmt, args_copy);
     va_end(args_copy);
     
     str_buf_ensure(buf, buf->size + len + 1);
@@ -74,8 +74,8 @@ void str_buf_printf_back(str_buf_t *buf, const char *fmt, ...) {
     va_end(args);
 }
 
-void str_buf_pop_front(str_buf_t *buf, size_t num) {
-    size_t to_remove = num > buf->size ? buf->size : num;
+void str_buf_pop_front(str_buf_t *buf, int num) {
+    int to_remove = num > buf->size ? buf->size : num;
     memmove(buf->data, buf->data + to_remove, (buf->size - to_remove));
     buf->size -= to_remove;
     buf->data[buf->size] = '\0';
@@ -85,7 +85,7 @@ char *str_buf_get(str_buf_t *buf) {
     return buf->data;
 }
 
-size_t str_buf_get_size(const str_buf_t *buf) {
+int str_buf_get_size(const str_buf_t *buf) {
     return buf->size;
 }
 

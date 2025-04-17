@@ -36,7 +36,7 @@ typedef enum {
 serial_t *serial_open(const char *address, serial_speed_t speed);
 void serial_close(serial_t *serial);
 
-size_t serial_read(serial_t *serial, char *buffer, size_t cap);
-size_t serial_write(serial_t *serial, const char *buffer, size_t num);
+int serial_read(serial_t *serial, char *buffer, int cap);
+int serial_write(serial_t *serial, const char *buffer, int num);
 
 #endif /* ifndef _UART_H_ */

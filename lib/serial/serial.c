@@ -99,17 +99,17 @@ void serial_close(serial_t *serial) {
     free(serial);
 }
 
-size_t serial_read(serial_t *serial, char *buffer, size_t cap) {
+int serial_read(serial_t *serial, char *buffer, int cap) {
 #if USE_POSIX
-    return read(serial->fd, buffer, cap);
+    return (int)read(serial->fd, buffer, cap);
 #else
     return 0;
 #endif
 }
 
-size_t serial_write(serial_t *serial, const char *buffer, size_t num) {
+int serial_write(serial_t *serial, const char *buffer, int num) {
 #if USE_POSIX
-    return write(serial->fd, buffer, num);
+    return (int)write(serial->fd, buffer, num);
 #else
     return 0;
 #endif

@@ -31,14 +31,14 @@ void cmd_mgr_fini() {
     str_buf_fini(&cmd_mgr.buf_out);
 }
 
-size_t cmd_mgr_get_output(char *out, size_t cap) {
-    size_t available = str_buf_get_size(&cmd_mgr.buf_out);
+int cmd_mgr_get_output(char *out, int cap) {
+    int available = str_buf_get_size(&cmd_mgr.buf_out);
     
     if(cap == 0 && out == NULL)
         return available;
     
     const char *data = str_buf_get(&cmd_mgr.buf_out);
-    size_t to_copy = available > cap - 1 ? cap - 1 : available;
+    int to_copy = available > cap - 1 ? cap - 1 : available;
     
     memcpy(out, data, to_copy);
     out[to_copy] = '\0';
@@ -79,7 +79,7 @@ void cmd_mgr_send_cmd_commit() {
     cmd_mgr.sending = false;
 }
 
-void cmd_mgr_proccess_input(const char *str, size_t len) {
+void cmd_mgr_proccess_input(const char *str, int len) {
     str_buf_push_back(&cmd_mgr.buf_in, str, len);
 }
 
@@ -168,7 +168,7 @@ bool cmd_mgr_get_arg_bool() {
     return val;
 }
 
-size_t cmd_mgr_get_arg_str(char *buf, size_t cap) {
+int cmd_mgr_get_arg_str(char *buf, int cap) {
     token_t tok;
     char *str = str_buf_get(&cmd_mgr.buf_in);
     const char *end = cmd_mgr.cmd_end;
@@ -177,10 +177,12 @@ size_t cmd_mgr_get_arg_str(char *buf, size_t cap) {
     
     *tok.end = '\0';
     
-    size_t len = tok.end - tok.start;
-    size_t to_copy = len > cap-1 ? cap - 1 : len;
-    memcpy(buf, tok.start, to_copy);
-    buf[to_copy] = '\0';
+    int len = tok.end - tok.start;
+    int to_copy = len > cap-1 ? cap - 1 : len;
+    if(cap) {
+        memcpy(buf, tok.start, to_copy);
+        buf[to_copy] = '\0';
+    }
     
     str_buf_pop_front(&cmd_mgr.buf_in, len + 1);
     return true;
