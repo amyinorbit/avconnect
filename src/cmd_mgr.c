@@ -14,73 +14,69 @@
 #include <stdlib.h>
 #include <string.h>
 
-static struct {
-    bool            sending;
-    str_buf_t       buf_in;
-    str_buf_t       buf_out;
-    
-    const char      *cmd_end;
-} cmd_mgr;
-
-void cmd_mgr_init() {
-    str_buf_init(&cmd_mgr.buf_in);
-    str_buf_init(&cmd_mgr.buf_out);
+void cmd_mgr_init(cmd_mgr_t *mgr) {
+    str_buf_init(&mgr->buf_in);
+    str_buf_init(&mgr->buf_out);
+    mgr->cmd_end = NULL;
+    mgr->sending = false;
 }
-void cmd_mgr_fini() {
-    str_buf_fini(&cmd_mgr.buf_in);
-    str_buf_fini(&cmd_mgr.buf_out);
+void cmd_mgr_fini(cmd_mgr_t *mgr) {
+    str_buf_fini(&mgr->buf_in);
+    str_buf_fini(&mgr->buf_out);
+    mgr->cmd_end = NULL;
+    mgr->sending = false;
 }
 
-int cmd_mgr_get_output(char *out, int cap) {
-    int available = str_buf_get_size(&cmd_mgr.buf_out);
+int cmd_mgr_get_output(cmd_mgr_t *mgr, char *out, int cap) {
+    int available = str_buf_get_size(&mgr->buf_out);
     
     if(cap == 0 && out == NULL)
         return available;
     
-    const char *data = str_buf_get(&cmd_mgr.buf_out);
+    const char *data = str_buf_get(&mgr->buf_out);
     int to_copy = available > cap - 1 ? cap - 1 : available;
     
     memcpy(out, data, to_copy);
     out[to_copy] = '\0';
-    str_buf_clear(&cmd_mgr.buf_out);
+    str_buf_clear(&mgr->buf_out);
     return to_copy;
 }
 
-void cmd_mgr_send_cmd_start(int16_t cmd) {
-    if(cmd_mgr.sending)
-        cmd_mgr_send_cmd_commit();
-    str_buf_printf_back(&cmd_mgr.buf_out, "%d", (int)cmd);
-    cmd_mgr.sending = true;
+void cmd_mgr_send_cmd_start(cmd_mgr_t *mgr, int16_t cmd) {
+    if(mgr->sending)
+        cmd_mgr_send_cmd_commit(mgr);
+    str_buf_printf_back(&mgr->buf_out, "%d", (int)cmd);
+    mgr->sending = true;
 }
 
-void cmd_mgr_send_arg_int(int16_t arg) {
-    if(!cmd_mgr.sending)
+void cmd_mgr_send_arg_int(cmd_mgr_t *mgr, int16_t arg) {
+    if(!mgr->sending)
         return;
-    str_buf_printf_back(&cmd_mgr.buf_out, ",%d", (int)arg);
+    str_buf_printf_back(&mgr->buf_out, ",%d", (int)arg);
 }
 
-void cmd_mgr_send_arg_bool(bool arg) {
-    if(!cmd_mgr.sending)
+void cmd_mgr_send_arg_bool(cmd_mgr_t *mgr, bool arg) {
+    if(!mgr->sending)
         return;
-    str_buf_printf_back(&cmd_mgr.buf_out, ",%s", arg ? "true" : "false");
+    str_buf_printf_back(&mgr->buf_out, ",%s", arg ? "true" : "false");
 }
 
-void cmd_mgr_send_arg_cstr(const char *str) {
-    if(!cmd_mgr.sending)
+void cmd_mgr_send_arg_cstr(cmd_mgr_t *mgr, const char *str) {
+    if(!mgr->sending)
         return;
     // TODO: we should probably be escaping data here.
-    str_buf_printf_back(&cmd_mgr.buf_out, ",%s", str);
+    str_buf_printf_back(&mgr->buf_out, ",%s", str);
 }
 
-void cmd_mgr_send_cmd_commit() {
-    if(!cmd_mgr.sending)
+void cmd_mgr_send_cmd_commit(cmd_mgr_t *mgr) {
+    if(!mgr->sending)
         return;
-    str_buf_push_back(&cmd_mgr.buf_out, ";", 1);
-    cmd_mgr.sending = false;
+    str_buf_push_back(&mgr->buf_out, ";\r\n", 3);
+    mgr->sending = false;
 }
 
-void cmd_mgr_proccess_input(const char *str, int len) {
-    str_buf_push_back(&cmd_mgr.buf_in, str, len);
+void cmd_mgr_proccess_input(cmd_mgr_t *mgr, const char *str, int len) {
+    str_buf_push_back(&mgr->buf_in, str, len);
 }
 
 static char *skip_white_space(char *str) {
@@ -132,46 +128,46 @@ static bool get_next_token(char *str, const char *cmd_end, token_t *tok) {
     return true;
 }
 
-int16_t cmd_mgr_get_cmd() {
-    char *str = str_buf_get(&cmd_mgr.buf_in);
-    cmd_mgr.cmd_end = get_cmd_end(str);
-    if(cmd_mgr.cmd_end == NULL)
+int16_t cmd_mgr_get_cmd(cmd_mgr_t *mgr) {
+    char *str = str_buf_get(&mgr->buf_in);
+    mgr->cmd_end = get_cmd_end(str);
+    if(mgr->cmd_end == NULL)
         return -1;
-    return cmd_mgr_get_arg_int();
+    return cmd_mgr_get_arg_int(mgr);
 }
 
-int16_t cmd_mgr_get_arg_int() {
+int16_t cmd_mgr_get_arg_int(cmd_mgr_t *mgr) {
     token_t tok;
-    char *str = str_buf_get(&cmd_mgr.buf_in);
-    const char *end = cmd_mgr.cmd_end;
+    char *str = str_buf_get(&mgr->buf_in);
+    const char *end = mgr->cmd_end;
     if(!get_next_token(str, end, &tok))
         return 0;
     
     *tok.end = '\0';
     int16_t val = (int16_t)atoi(tok.start);
     
-    str_buf_pop_front(&cmd_mgr.buf_in, (tok.end - str) + 1);
+    str_buf_pop_front(&mgr->buf_in, (tok.end - str) + 1);
     return val;
 }
 
-bool cmd_mgr_get_arg_bool() {
+bool cmd_mgr_get_arg_bool(cmd_mgr_t *mgr) {
     token_t tok;
-    char *str = str_buf_get(&cmd_mgr.buf_in);
-    const char *end = cmd_mgr.cmd_end;
+    char *str = str_buf_get(&mgr->buf_in);
+    const char *end = mgr->cmd_end;
     if(!get_next_token(str, end, &tok))
         return false;
     
     *tok.end = '\0';
     bool val = strcmp(tok.start, "true") == 0;
     
-    str_buf_pop_front(&cmd_mgr.buf_in, (tok.end - str) + 1);
+    str_buf_pop_front(&mgr->buf_in, (tok.end - str) + 1);
     return val;
 }
 
-int cmd_mgr_get_arg_str(char *buf, int cap) {
+int cmd_mgr_get_arg_str(cmd_mgr_t *mgr, char *buf, int cap) {
     token_t tok;
-    char *str = str_buf_get(&cmd_mgr.buf_in);
-    const char *end = cmd_mgr.cmd_end;
+    char *str = str_buf_get(&mgr->buf_in);
+    const char *end = mgr->cmd_end;
     if(!get_next_token(str, end, &tok))
         return false;
     
@@ -184,6 +180,6 @@ int cmd_mgr_get_arg_str(char *buf, int cap) {
         buf[to_copy] = '\0';
     }
     
-    str_buf_pop_front(&cmd_mgr.buf_in, len + 1);
+    str_buf_pop_front(&mgr->buf_in, len + 1);
     return true;
 }
