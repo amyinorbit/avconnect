@@ -1,68 +1,74 @@
-//===--------------------------------------------------------------------------------------------===
-// buffers.h - Macro-backed variable length buffers.
-//
-// Created by Amy Parent <amy@amyparent.com>
-// Copyright (c) 2021 Amy Parent
-// Licensed under the MIT License
-// =^•.•^=
-//===--------------------------------------------------------------------------------------------===
-#pragma once
-#include <warp/warp.h>
-#include "memory.h"
+/*===--------------------------------------------------------------------------------------------===
+ * buffers.h
+ *
+ * Created by Amy Parent <amy@amyparent.com>
+ * Copyright (c) 2025 Amy Parent
+ *
+ * Licensed under the MIT License
+ *===--------------------------------------------------------------------------------------------===
+*/
+#ifndef _BUFFERS_H_
+#define _BUFFERS_H_
 
-#define DECLARE_BUFFER(name, T)                                                                    \
+#include <stdint.h>
+#include <stdlib.h>
+#include <stddef.h>
+#include "../bindings/inputs.h"
+#include "../bindings/outputs.h"
+
+
+#define DECLARE_BUFFER(name, T, N)                                                                 \
     typedef struct {                                                                               \
-        T* data;                                                                                   \
+        T data[N];                                                                                 \
         int32_t count;                                                                             \
-        int32_t capacity;                                                                          \
     } name##_buf_t;                                                                                \
     void name##_buf_init(name##_buf_t* buffer);                                                    \
-    void name##_buf_fini(warp_vm_t *vm, name##_buf_t* buffer);                                     \
-    void name##_buf_fill(warp_vm_t *vm, name##_buf_t* buffer, T data,  int32_t count);             \
-    void name##_buf_write(warp_vm_t *vm, name##_buf_t* buffer, T data);                            \
-    T *name##_buf_take(name##_buf_t *buffer)
+    void name##_buf_fini(name##_buf_t* buffer);                                                    \
+    T* name##_buf_add(name##_buf_t* buffer);                                                       \
+    void name##_buf_fill(name##_buf_t* buffer, T data,  int32_t count);                            \
+    void name##_buf_write(name##_buf_t* buffer, T data);                                           \
+    void name##_buf_remove(name##_buf_t* buffer, int32_t n);                                       
 
 // This should be used once for each T instantiation, somewhere in a .c file.
-#define DEFINE_BUFFER(name, T)                                                                     \
+#define DEFINE_BUFFER(name, T, N)                                                                  \
     void name##_buf_init(name##_buf_t* buffer) {                                                   \
-        buffer->data = NULL;                                                                       \
-        buffer->capacity = 0;                                                                      \
+        memset(buffer->data, 0, sizeof(buffer->data));                                             \
         buffer->count = 0;                                                                         \
     }                                                                                              \
                                                                                                    \
-    void name##_buf_fini(warp_vm_t* vm, name##_buf_t* buffer) {                                    \
-        if(buffer->data)                                                                           \
-            FREE_ARRAY(vm, buffer->data, T, buffer->capacity);                                     \
+    void name##_buf_fini(name##_buf_t* buffer) {                                                   \
         name##_buf_init(buffer);                                                                   \
     }                                                                                              \
                                                                                                    \
-    void name##_buf_fill(warp_vm_t* vm, name##_buf_t* buffer, T data, int count) {                 \
-        if(buffer->capacity < buffer->count + count) {                                             \
-            int old_cap = buffer->capacity;                                                        \
-            while(buffer->capacity < buffer->count + count)                                        \
-                buffer->capacity = GROW_CAPACITY(buffer->capacity);                                \
-                buffer->data = GROW_ARRAY(vm, buffer->data, T, old_cap, buffer->capacity);         \
-        }                                                                                          \
                                                                                                    \
+    T* name##_buf_add(name##_buf_t* buffer) {                                                      \
+        assert(buffer->count < N);                                                                 \
+        return &buffer->data[buffer->count++];                                                     \
+    }                                                                                              \
+                                                                                                   \
+    void name##_buf_fill(name##_buf_t* buffer, T data, int count) {                                \
+        assert(buffer->count + count < N);                                                         \
         for(int i = 0; i < count; i++) {                                                           \
             buffer->data[buffer->count++] = data;                                                  \
         }                                                                                          \
     }                                                                                              \
                                                                                                    \
-    void name##_buf_write(warp_vm_t* vm, name##_buf_t* buffer, T data) {                           \
-        name##_buf_fill(vm, buffer, data, 1);                                                      \
+    void name##_buf_write(name##_buf_t* buffer, T data) {                                          \
+        name##_buf_fill(buffer, data, 1);                                                          \
     }                                                                                              \
                                                                                                    \
-                                                                                                   \
-    T *name##_buf_take(name##_buf_t *buffer) {                                                     \
-        T *data = buffer->data;                                                                    \
-        name##_buf_init(buffer);                                                                   \
-        return data;                                                                               \
+    void name##_buf_remove(name##_buf_t* buffer, int32_t n) {                                      \
+        assert(n < N);                                                                             \
+        memmove(buffer->data + n, buffer->data + n + 1, sizeof(T) * (buffer->count - n));          \
+        buffer->count -=1;                                                                         \
     }                                                                                              \
 
-DECLARE_BUFFER(str, char);
-DECLARE_BUFFER(u8, uint8_t);
-DECLARE_BUFFER(i32, int32_t);
-DECLARE_BUFFER(f32, float);
-DECLARE_BUFFER(val, warp_value_t);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* ifndef _BUFFERS_H_ */

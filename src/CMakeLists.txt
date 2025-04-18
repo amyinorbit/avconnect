@@ -1,11 +1,14 @@
 set(PLUGIN_SRC
     utils/str_buf.c
     utils/cmd_mgr.c
+    device.c
     settings.cpp
     xplane.c)
 set(PLUGIN_HDR
     utils/str_buf.h
     utils/cmd_mgr.h
+    utils/buffers.h
+    device.h
     settings.h
     xplane.h)
 

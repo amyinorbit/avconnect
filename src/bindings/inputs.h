@@ -33,8 +33,8 @@ typedef struct {
     av_in_t         base;
     char            cmd_path_up[128];
     char            cmd_path_dn[128];
-    XPLCommandRef   cmd_up;
-    XPLCommandRef   cmd_dn;
+    XPLMCommandRef  cmd_up;
+    XPLMCommandRef  cmd_dn;
 } av_in_encoder_t;
 
 typedef struct {
