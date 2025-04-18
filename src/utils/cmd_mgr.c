@@ -20,6 +20,7 @@ void cmd_mgr_init(cmd_mgr_t *mgr) {
     mgr->cmd_end = NULL;
     mgr->sending = false;
 }
+
 void cmd_mgr_fini(cmd_mgr_t *mgr) {
     str_buf_fini(&mgr->buf_in);
     str_buf_fini(&mgr->buf_out);

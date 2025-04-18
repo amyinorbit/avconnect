@@ -1,5 +1,13 @@
-set(PLUGIN_SRC settings.cpp str_buf.c cmd_mgr.c xplane.c)
-set(PLUGIN_HDR settings.h str_buf.h cmd_mgr.h xplane.h)
+set(PLUGIN_SRC
+    utils/str_buf.c
+    utils/cmd_mgr.c
+    settings.cpp
+    xplane.c)
+set(PLUGIN_HDR
+    utils/str_buf.h
+    utils/cmd_mgr.h
+    settings.h
+    xplane.h)
 
 set(ALL_SRC ${PLUGIN_SRC} ${PLUGIN_HDR})
 
@@ -9,6 +17,6 @@ target_compile_options(avconnect PUBLIC -Wall -Wextra  -Werror)
 target_link_libraries(avconnect PUBLIC serial xsb acfutils xpwidgets xplm)
 
 
-add_executable(demo str_buf.c cmd_mgr.c str_buf.h cmd_mgr.h main.c)
+add_executable(demo utils/str_buf.c utils/cmd_mgr.c utils/str_buf.h utils/cmd_mgr.h main.c)
 target_compile_options(demo PUBLIC -Wall -Wextra  -Werror)
 target_link_libraries(demo PUBLIC serial)

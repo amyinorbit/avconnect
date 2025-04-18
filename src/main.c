@@ -12,7 +12,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <serial/serial.h>
-#include "cmd_mgr.h"
+#include "utils/cmd_mgr.h"
 
 static int brightness = 120;
 static serial_t *serial = NULL;
@@ -104,7 +104,7 @@ static void process_switch(cmd_mgr_t *mgr) {
     if(strcmp(name, "APR") == 0 && value == 1) {
         do_light_test(mgr);
     }
-    
+
 }
 
 
