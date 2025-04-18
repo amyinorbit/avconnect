@@ -121,6 +121,14 @@ int main(int argc, const char **argv) {
         return -1;
     }
     
+    
+    serial_info_t devices[32] = {};
+    int device_count = serial_list_devices(devices, 32);
+    for(int i = 0; i < device_count; ++i) {
+        printf("device: %s (%s)\n", devices[i].name, devices[i].address);
+    }
+    serial_free_list(devices, device_count);
+    
     cmd_mgr_init();
 
     cmd_mgr_send_cmd_start(2);

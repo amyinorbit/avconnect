@@ -27,7 +27,7 @@ STATIC
 
 target_compile_options(xsb PRIVATE -Wall)
 target_link_libraries(xsb PUBLIC m ImGui acfutils xplm xpwidgets)
-target_include_directories(xsb PUBLIC xsb)
+target_include_directories(xsb PUBLIC xsb_public)
 
 set_target_properties(xsb
 PROPERTIES
@@ -40,6 +40,12 @@ set_target_xplm_version(xsb 301)
 target_compile_definitions(xsb PUBLIC -DDEBUG=1)
 
 add_library(serial STATIC serial/serial.c serial/serial/serial.h)
+
+if(APPLE)
+    target_sources(serial PRIVATE serial/enum_macos.c)
+    target_link_libraries(serial PRIVATE $<LINK_LIBRARY:FRAMEWORK,CoreFoundation> $<LINK_LIBRARY:FRAMEWORK,IOKit>)
+endif()
+
 target_include_directories(serial PUBLIC serial)
 target_compile_options(serial PUBLIC -Wall -Wextra -Werror)
 

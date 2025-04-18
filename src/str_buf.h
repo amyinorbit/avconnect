@@ -12,6 +12,10 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // TODO: defined alternate, static-memory-based version for Raspberry Pi Pico
 typedef struct {
     char    *data;
@@ -33,5 +37,9 @@ int str_buf_get_size(const str_buf_t *buf);
 char *str_buf_get(str_buf_t *buf);
 char *str_buf_take(str_buf_t *buf);
 void str_buf_free_data(char *buf);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* ifndef _STR_BUF_H_ */

@@ -1,5 +1,5 @@
-set(PLUGIN_SRC str_buf.c cmd_mgr.c xplane.c)
-set(PLUGIN_HDR str_buf.h cmd_mgr.h xplane.h)
+set(PLUGIN_SRC settings.cpp str_buf.c cmd_mgr.c xplane.c)
+set(PLUGIN_HDR settings.h str_buf.h cmd_mgr.h xplane.h)
 
 set(ALL_SRC ${PLUGIN_SRC} ${PLUGIN_HDR})
 

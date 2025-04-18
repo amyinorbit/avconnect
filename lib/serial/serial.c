@@ -114,3 +114,11 @@ int serial_write(serial_t *serial, const char *buffer, int num) {
     return 0;
 #endif
 }
+
+
+void serial_free_list(serial_info_t *dev_info, int num) {
+    for(int i = 0; i < num; ++i) {
+        free(dev_info[i].address);
+        free(dev_info[i].name);
+    }
+}

@@ -14,6 +14,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void cmd_mgr_init();
 void cmd_mgr_fini();
 
@@ -29,5 +33,9 @@ int16_t cmd_mgr_get_cmd();
 int16_t cmd_mgr_get_arg_int();
 bool cmd_mgr_get_arg_bool();
 int cmd_mgr_get_arg_str(char *buf, int len);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* ifndef _CMD_MGR_H_ */

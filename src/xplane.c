@@ -16,8 +16,6 @@
 #include <XPLMPlugin.h>
 #include <XPLMPlanes.h>
 #include <XPLMProcessing.h>
-#include <XPLMUtilities.h>
-#include <XPLMMenus.h>
 
 #include <acfutils/assert.h>
 #include <acfutils/core.h>
@@ -28,6 +26,9 @@
 #include <acfutils/helpers.h>
 #include <acfutils/log.h>
 
+#include "xplane.h"
+#include "settings.h"
+
 #define PLUGIN_NAME "AvConnect"
 #define PLUGIN_DESCRIPTION "Connector plugin for serial devices"
 #define PLUGIN_SIG "com.amyinorbit.avconnect"
@@ -35,6 +36,7 @@
 static char xplane_dir[512];
 static char plane_dir[512];
 static char plugin_dir[512];
+static XPLMMenuID plugin_menu = NULL;
 
 static void fix_path(char *path) {
     fix_pathsep(path);
@@ -113,12 +115,33 @@ PLUGIN_API void XPluginStop(void) {
     dcr_fini();
 }
 
+typedef enum {
+    MENU_RELOAD = 0x10,
+} menu_action_t;
+
+static void menu_handler(void *menu_ref, void *item_ref) {
+    UNUSED(menu_ref);
+    UNUSED(item_ref);
+    
+    switch((menu_action_t)((intptr_t)item_ref)) {
+    case MENU_RELOAD:
+        XPLMReloadPlugins();
+        break;
+    }
+}
 
 PLUGIN_API int XPluginEnable(void) {
+    
+    XPLMMenuID plugins = XPLMFindPluginsMenu();
+    plugin_menu = XPLMCreateMenu("AvConnect", plugins, -1, menu_handler, NULL);
+    XPLMAppendMenuItem(plugin_menu, "Reload Plugins", (void *)MENU_RELOAD, 0);
+    settings_init();
     return 1;
 }
 
 PLUGIN_API void XPluginDisable(void) {
+    settings_fini();
+    XPLMDestroyMenu(plugin_menu);
 }
 
 PLUGIN_API void XPluginReceiveMessage(XPLMPluginID from, int msg, void *param) {
@@ -137,6 +160,10 @@ const char *get_xplane_dir(void) {
 
 const char *get_plane_dir(void) {
     return plane_dir;
+}
+
+XPLMMenuID get_plugin_menu(void) {
+    return plugin_menu;
 }
 
 #if	IBM

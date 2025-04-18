@@ -16,9 +16,10 @@
 #ifndef _XPLANE_H_
 #define _XPLANE_H_
 
+#include <stddef.h>
 #include <XPLMDefs.h>
+#include <XPLMMenus.h>
 #include <XPLMUtilities.h>
-#include <uns1/uns1.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,7 +38,8 @@ PLUGIN_API void XPluginReceiveMessage(XPLMPluginID from, int msg, void *param);
 
 const char *get_plugin_dir(void);
 const char *get_xplane_dir(void);
-const char *get_plane_dir(void); 
+const char *get_plane_dir(void);
+XPLMMenuID get_plugin_menu(void);
 
 #ifdef __cplusplus
 }

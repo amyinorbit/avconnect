@@ -13,11 +13,15 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct serial_t serial_t;
 
 typedef struct {
-    const char *address;
-    const char *name;
+    char *address;
+    char *name;
 } serial_info_t;
 
 typedef enum {
@@ -33,10 +37,18 @@ typedef enum {
     SERIAL_BAUDS_115200
 } serial_speed_t;
 
+
+int serial_list_devices(serial_info_t *dev_info, int cap);
+void serial_free_list(serial_info_t *dev_info, int num);
+
 serial_t *serial_open(const char *address, serial_speed_t speed);
 void serial_close(serial_t *serial);
 
 int serial_read(serial_t *serial, char *buffer, int cap);
 int serial_write(serial_t *serial, const char *buffer, int num);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* ifndef _UART_H_ */
