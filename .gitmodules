@@ -1,0 +1,6 @@
+[submodule "lib/xsb_public"]
+	path = lib/xsb_public
+	url = git@github.com:amyinorbit/xsb_public.git
+[submodule "lib/imgui"]
+	path = lib/imgui
+	url = git@github.com:ocornut/imgui.git
