@@ -81,12 +81,16 @@ void cmd_mgr_proccess_input(cmd_mgr_t *mgr, const char *str, int len) {
 }
 
 static char *skip_white_space(char *str) {
+    if(str == NULL)
+        return NULL;
     while(isspace(*str))
         str += 1;
     return *str != '\0' ? str : NULL;
 }
 
 static char *get_param_end(char *str) {
+    if(str == NULL)
+        return NULL;
     while(true) {
         if(*str == '\0' || *str == ';' || *str == ',')
             return str;
@@ -96,6 +100,8 @@ static char *get_param_end(char *str) {
 }
 
 static char *get_cmd_end(char *str) {
+    if(str == NULL)
+        return NULL;
     while(true) {
         if(*str == '\0')
             return NULL;
@@ -113,7 +119,7 @@ typedef struct {
 } token_t;
 
 static bool get_next_token(char *str, const char *cmd_end, token_t *tok) {
-    if(cmd_end == NULL)
+    if(str == NULL || cmd_end == NULL)
         return false;
     char *start = skip_white_space(str);
     if(start == NULL)
@@ -131,6 +137,8 @@ static bool get_next_token(char *str, const char *cmd_end, token_t *tok) {
 
 int16_t cmd_mgr_get_cmd(cmd_mgr_t *mgr) {
     char *str = str_buf_get(&mgr->buf_in);
+    if(str == NULL)
+        return -1;
     mgr->cmd_end = get_cmd_end(str);
     if(mgr->cmd_end == NULL)
         return -1;

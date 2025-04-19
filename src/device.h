@@ -13,11 +13,16 @@
 #include "bindings/inputs.h"
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct av_device_t av_device_t;
 
-av_device_t *av_device_new(const char *dev);
-void av_device_destroy(av_device_t *conn);
+av_device_t *av_device_new();
+void av_device_destroy(av_device_t *dev);
 
+const char *av_device_get_name(const av_device_t *dev);
 void av_device_set_address(av_device_t *dev, const char *address);
 bool av_device_is_connected(const av_device_t *dev);
 bool av_device_try_connect(const av_device_t *dev);
@@ -31,5 +36,10 @@ av_in_button_t *av_device_add_in_button(av_device_t *dev);
 av_in_mux_t *av_device_add_in_mux(av_device_t *dev);
 
 void av_device_update(av_device_t *dev);
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif /* ifndef _MAPPING_H_ */

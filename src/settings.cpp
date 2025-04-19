@@ -29,6 +29,9 @@ public:
     
     virtual ~Settings() {
         serial_free_list(ports, port_count);
+        for(int i = 0; i < device_count; ++i) {
+            av_device_destroy(devices[i]);
+        }
     }
     
     virtual void buildInterface() override {
@@ -40,13 +43,34 @@ public:
         	ImGui::TableSetupColumn("Device Details", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoSort);
             
             ImGui::TableNextColumn();
+        
+            ImGui::PushItemWidth(-1);
+            if(ImGui::Button("Add") && device_count < max_devices) {
+                // TODO: we probably do not want our device register to exist in settings, we
+                // should only be holding referebces
+                devices[device_count] = av_device_new();
+                sel_device = devices[device_count];
+                device_count += 1;
+            }
             if(ImGui::BeginListBox("##Devices", ImVec2(-1, -2))) {
+                
+                for(int i = 0; i < device_count; ++i) {
+                    av_device_t *dev = devices[i];
+                    const char *name = av_device_get_name(devices[i]);
+                    if(ImGui::Selectable(name, dev == sel_device)) {
+                        sel_device = dev;
+                    }
+                }
                 
                 ImGui::EndListBox();
             }
+            
             ImGui::TableNextColumn();
-            if(sel_device == nullptr) {
-                portDropdown();
+            if(sel_device != nullptr) {
+                ImGui::Text("%s", av_device_get_name(sel_device));
+                if(portDropdown()) {
+                    av_device_set_address(sel_device, sel_port->address);
+                }
                 ImGui::SameLine();
                 if(ImGui::Button("Scan")) {
                     updatePorts();
@@ -70,14 +94,15 @@ public:
             ImGui::EndTable();
         }
         
-        
-        
+        // TODO: move this to a flight loop callback
+        for(int i = 0; i < device_count; ++i) {
+            av_device_update(devices[i]);
+        }
     }
     
 private:
     
     void buildInputsTab() {
-        
     }
     
     void buildOutputsTab() {
@@ -107,11 +132,14 @@ private:
     }
     
     static constexpr int max_ports = 64;
+    static constexpr int max_devices = 16;
 
     serial_info_t   *sel_port = nullptr;
     serial_info_t   ports[max_ports];
     int             port_count = 0;
     
+    av_device_t     *devices[max_devices];
+    int             device_count = 0;
     av_device_t     *sel_device = nullptr;
 };
 

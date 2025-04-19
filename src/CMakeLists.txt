@@ -2,6 +2,7 @@ set(PLUGIN_SRC
     utils/str_buf.c
     utils/cmd_mgr.c
     device.c
+    device_input.c
     settings.cpp
     xplane.c)
 set(PLUGIN_HDR
@@ -9,6 +10,7 @@ set(PLUGIN_HDR
     utils/cmd_mgr.h
     utils/buffers.h
     device.h
+    device_impl.h
     settings.h
     xplane.h)
 

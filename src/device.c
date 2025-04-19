@@ -7,53 +7,22 @@
  * Licensed under the MIT License
  *===--------------------------------------------------------------------------------------------===
 */
-#include "device.h"
-#include "cmd_ids.h"
-#include "utils/cmd_mgr.h"
-#include "utils/buffers.h"
-#include <serial/serial.h>
-#include <acfutils/helpers.h>
-
-#define MAX_BINDINGS        (128)
-#define MAX_TYPE_BINDINGS   (32)
-
-DECLARE_BUFFER(encoder, av_in_encoder_t, MAX_TYPE_BINDINGS);
-DECLARE_BUFFER(button, av_in_button_t, MAX_TYPE_BINDINGS);
-DECLARE_BUFFER(mux, av_in_mux_t, MAX_TYPE_BINDINGS);
-DECLARE_BUFFER(input, av_in_t *, MAX_BINDINGS);
+#include "device_impl.h"
 
 DEFINE_BUFFER(encoder, av_in_encoder_t, MAX_TYPE_BINDINGS);
 DEFINE_BUFFER(button, av_in_button_t, MAX_TYPE_BINDINGS);
 DEFINE_BUFFER(mux, av_in_mux_t, MAX_TYPE_BINDINGS);
 DEFINE_BUFFER(input, av_in_t *, MAX_BINDINGS);
 
-#define MAX_CMD_CB      (34)
 
-typedef void (*cmd_cb_t)(av_device_t *dev);
 
-struct av_device_t {
-    char                address[128];
-    char                name[128];
-    char                serial_no[128];
-    char                diag[128];
-    
-    serial_t            *serial;
-    cmd_mgr_t           mgr;
-    
-    input_buf_t         inputs;
-    encoder_buf_t       encoders;
-    button_buf_t        buttons;
-    mux_buf_t           mux_pins;
-    
-    cmd_cb_t            callbacks[MAX_CMD_CB];
-};
-
-av_device_t *av_device_new(const char *address) {
+av_device_t *av_device_new() {
     av_device_t *dev = safe_calloc(1, sizeof(*dev));
     
     dev->serial = NULL;
     dev->name[0] = '\0';
     dev->serial_no[0] = '\0';
+    dev->diag[0] = '\0';
     
     input_buf_init(&dev->inputs);
     encoder_buf_init(&dev->encoders);
@@ -61,10 +30,13 @@ av_device_t *av_device_new(const char *address) {
     mux_buf_init(&dev->mux_pins);
     
     cmd_mgr_init(&dev->mgr);
-    
     memset(dev->callbacks, 0, sizeof(dev->callbacks));
+    
 
-    av_device_set_address(dev, address);
+    dev->callbacks[kEncoderChange] = callback_encoder;
+    dev->callbacks[kButtonChange] = callback_button;
+    dev->callbacks[kInfo] = callback_info;
+    dev->callbacks[kDigInMuxChange] = callback_mux;
     return dev;
 }
 
@@ -76,6 +48,10 @@ void av_device_destroy(av_device_t *dev) {
     mux_buf_fini(&dev->mux_pins);
     
     free(dev);
+}
+
+const char *av_device_get_name(const av_device_t *dev) {
+    return strlen(dev->name) > 0 ? dev->name : "<no name>";
 }
 
 static void av_device_commit_output(av_device_t *dev) {
@@ -203,6 +179,7 @@ void av_device_update(av_device_t *dev) {
     // Get data from the serial connection
     char buf[512];
     int len = serial_read(dev->serial, buf, sizeof(buf));
+    cmd_mgr_proccess_input(&dev->mgr, buf, len);
     
     if(len < 0) {
         // Device has been lost. We need to do some stuff here
