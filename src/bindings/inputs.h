@@ -10,6 +10,7 @@
 #ifndef _INPUTS_H_
 #define _INPUTS_H_
 
+#include <stdbool.h>
 #include <XPLMUtilities.h>
 
 #ifdef __cplusplus
@@ -24,6 +25,14 @@ typedef enum {
 
 
 typedef struct {
+    char            path[128];
+    bool            has_changed;
+    bool            has_resolved;
+    XPLMCommandRef  ref;
+} av_cmd_t;
+
+
+typedef struct {
     av_in_type_t    type;
     char            name[32];
     char            comment[64];
@@ -31,23 +40,19 @@ typedef struct {
 
 typedef struct {
     av_in_t         base;
-    char            cmd_path_up[128];
-    char            cmd_path_dn[128];
-    XPLMCommandRef  cmd_up;
-    XPLMCommandRef  cmd_dn;
+    av_cmd_t        cmd_up;
+    av_cmd_t        cmd_dn;
 } av_in_encoder_t;
 
 typedef struct {
     av_in_t         base;
-    char            cmd_path[128];
-    XPLMCommandRef  cmd;
+    av_cmd_t        cmd;
 } av_in_button_t;
 
 typedef struct {
     av_in_t         base;
     int             pin;
-    char            cmd_path[128];
-    XPLMCommandRef  cmd;
+    av_cmd_t        cmd;
 } av_in_mux_t;
 
 #ifdef __cplusplus

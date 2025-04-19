@@ -184,3 +184,13 @@ int cmd_mgr_get_arg_str(cmd_mgr_t *mgr, char *buf, int cap) {
     str_buf_pop_front(&mgr->buf_in, len + 1);
     return true;
 }
+
+void cmd_mgr_skip_cmd(cmd_mgr_t *mgr) {
+    if(mgr->cmd_end == NULL)
+        return;
+    const char *str = str_buf_get(&mgr->buf_in);
+    const char *end = mgr->cmd_end;
+    
+    int len = end - str;
+    str_buf_pop_front(&mgr->buf_in, len+1);
+}

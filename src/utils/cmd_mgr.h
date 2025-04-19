@@ -41,6 +41,7 @@ int16_t cmd_mgr_get_cmd(cmd_mgr_t *mgr);
 int16_t cmd_mgr_get_arg_int(cmd_mgr_t *mgr);
 bool cmd_mgr_get_arg_bool(cmd_mgr_t *mgr);
 int cmd_mgr_get_arg_str(cmd_mgr_t *mgr, char *buf, int len);
+void cmd_mgr_skip_cmd(cmd_mgr_t *mgr);
 
 #ifdef __cplusplus
 }

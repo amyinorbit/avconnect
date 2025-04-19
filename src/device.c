@@ -8,6 +8,8 @@
  *===--------------------------------------------------------------------------------------------===
 */
 #include "device.h"
+#include "cmd_ids.h"
+#include "utils/cmd_mgr.h"
 #include "utils/buffers.h"
 #include <serial/serial.h>
 #include <acfutils/helpers.h>
@@ -25,36 +27,49 @@ DEFINE_BUFFER(button, av_in_button_t, MAX_TYPE_BINDINGS);
 DEFINE_BUFFER(mux, av_in_mux_t, MAX_TYPE_BINDINGS);
 DEFINE_BUFFER(input, av_in_t *, MAX_BINDINGS);
 
+#define MAX_CMD_CB      (34)
+
+typedef void (*cmd_cb_t)(av_device_t *dev);
 
 struct av_device_t {
     char                address[128];
     char                name[128];
     char                serial_no[128];
+    char                diag[128];
+    
     serial_t            *serial;
+    cmd_mgr_t           mgr;
     
     input_buf_t         inputs;
     encoder_buf_t       encoders;
     button_buf_t        buttons;
     mux_buf_t           mux_pins;
+    
+    cmd_cb_t            callbacks[MAX_CMD_CB];
 };
 
 av_device_t *av_device_new(const char *address) {
     av_device_t *dev = safe_calloc(1, sizeof(*dev));
     
-    lacf_strlcpy(dev->address, address, sizeof(dev->address));
+    dev->serial = NULL;
     dev->name[0] = '\0';
     dev->serial_no[0] = '\0';
-    dev->serial = serial_open(address, SERIAL_BAUDS_115200);
     
     input_buf_init(&dev->inputs);
     encoder_buf_init(&dev->encoders);
     button_buf_init(&dev->buttons);
     mux_buf_init(&dev->mux_pins);
     
+    cmd_mgr_init(&dev->mgr);
+    
+    memset(dev->callbacks, 0, sizeof(dev->callbacks));
+
+    av_device_set_address(dev, address);
     return dev;
 }
 
 void av_device_destroy(av_device_t *dev) {
+    cmd_mgr_fini(&dev->mgr);
     input_buf_fini(&dev->inputs);
     encoder_buf_fini(&dev->encoders);
     button_buf_fini(&dev->buttons);
@@ -62,6 +77,45 @@ void av_device_destroy(av_device_t *dev) {
     
     free(dev);
 }
+
+static void av_device_commit_output(av_device_t *dev) {
+    if(dev->serial == NULL)
+        return;
+    cmd_mgr_send_cmd_commit(&dev->mgr);
+    char buf[64];
+    int len = cmd_mgr_get_output(&dev->mgr, buf, sizeof(buf));
+    if(len == 0)
+        return;
+    serial_write(dev->serial, buf, len);
+}
+
+void av_device_set_address(av_device_t *dev, const char *address) {
+    if(dev->serial != NULL) {
+        serial_close(dev->serial);
+        dev->serial = NULL;
+        // TODO: Send some kind of "reset to default state message maybe"
+    }
+    cmd_mgr_fini(&dev->mgr);
+    cmd_mgr_init(&dev->mgr);
+
+    lacf_strlcpy(dev->address, address, sizeof(dev->address));
+    lacf_strlcpy(dev->name, "Fetching device name...", sizeof(dev->name));
+    dev->serial = serial_open(address, SERIAL_BAUDS_115200);
+    
+    if(dev->serial == NULL)
+        return;
+    
+    cmd_mgr_send_cmd_start(&dev->mgr, kGetInfo);
+    av_device_commit_output(dev);
+    
+    // Send message to get 
+    
+}
+
+bool av_device_is_connected(const av_device_t *dev);
+bool av_device_try_connect(const av_device_t *dev);
+
+// MARK: - Input Management
 
 int av_device_get_in_count(const av_device_t *dev) {
     return dev->inputs.count;
@@ -138,5 +192,36 @@ av_in_mux_t *av_device_add_in_mux(av_device_t *dev) {
     av_in_mux_t *mux = mux_buf_add(&dev->mux_pins);
     init_binding(mux, AV_IN_MUX, sizeof(*mux), dev->mux_pins.count);
     return mux;
+}
+
+// MARK: - Device update
+
+void av_device_update(av_device_t *dev) {
+    if(dev->serial == NULL)
+        return;
+    
+    // Get data from the serial connection
+    char buf[512];
+    int len = serial_read(dev->serial, buf, sizeof(buf));
+    
+    if(len < 0) {
+        // Device has been lost. We need to do some stuff here
+        snprintf(dev->diag, sizeof(dev->diag), "connection lost");
+        serial_close(dev->serial);
+        dev->serial = NULL;
+        return;
+    }
+    
+    // Feed data to the command manager to actually process stuff
+    if(len > 0) {
+        int16_t cmd = 0;
+        if((cmd = cmd_mgr_get_cmd(&dev->mgr)) >= 0) {
+            if(cmd < MAX_CMD_CB && dev->callbacks[cmd] != NULL) {
+                dev->callbacks[cmd](dev);
+            } else {
+                cmd_mgr_skip_cmd(&dev->mgr);
+            }
+        }
+    }
 }
 

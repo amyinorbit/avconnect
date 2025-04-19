@@ -9,6 +9,8 @@
 */
 #include "settings.h"
 #include "xplane.h"
+#include "device.h"
+#include <serial/serial.h>
 #include <ImgWindow.h>
 #include <acfutils/helpers.h>
 
@@ -22,17 +24,95 @@ public:
         SetWindowTitle("AvConnect Settings");
         SetResizingLimits(500, 210, 500, 1024);
         
+        updatePorts();
     }
     
     virtual ~Settings() {
-        
+        serial_free_list(ports, port_count);
     }
     
     virtual void buildInterface() override {
         
+        
+        ImGui::PushItemWidth(-1);
+        if(ImGui::BeginTable("DeviceListLayout", 2)) {
+        	ImGui::TableSetupColumn("Device List", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, 140);
+        	ImGui::TableSetupColumn("Device Details", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoSort);
+            
+            ImGui::TableNextColumn();
+            if(ImGui::BeginListBox("##Devices", ImVec2(-1, -2))) {
+                
+                ImGui::EndListBox();
+            }
+            ImGui::TableNextColumn();
+            if(sel_device == nullptr) {
+                portDropdown();
+                ImGui::SameLine();
+                if(ImGui::Button("Scan")) {
+                    updatePorts();
+                }
+                ImGui::BeginTabBar("Bindings");
+                if(ImGui::BeginTabItem("Inputs")) {
+                    buildInputsTab();
+                    ImGui::EndTabItem();
+                }
+        
+                if(ImGui::BeginTabItem("Outputs")) {
+                    buildOutputsTab();
+                    ImGui::EndTabItem();
+                }
+                ImGui::EndTabBar();
+            } else {
+                ImGui::Spacing();
+                ImGui::Text("No Device Selected");
+            }
+            
+            ImGui::EndTable();
+        }
+        
+        
+        
     }
     
 private:
+    
+    void buildInputsTab() {
+        
+    }
+    
+    void buildOutputsTab() {
+        
+    }
+    
+    bool portDropdown() {
+        bool changed = false;
+        
+        if(ImGui::BeginCombo("Ports", sel_port ? sel_port->name : "<none>")) {
+            for(int i = 0; i < port_count; ++i) {
+                if(ImGui::Selectable(ports[i].name, &ports[i] == sel_port)) {
+                    sel_port = &ports[i];
+                    changed = true;
+                }
+            }
+            ImGui::EndCombo();
+        }
+        
+        return changed;
+    }
+    
+    void updatePorts() {
+        sel_port = nullptr;
+        serial_free_list(ports, port_count);
+        port_count = serial_list_devices(ports, max_ports);
+    }
+    
+    static constexpr int max_ports = 64;
+
+    serial_info_t   *sel_port = nullptr;
+    serial_info_t   ports[max_ports];
+    int             port_count = 0;
+    
+    av_device_t     *sel_device = nullptr;
 };
 
 

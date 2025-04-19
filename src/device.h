@@ -18,7 +18,7 @@ typedef struct av_device_t av_device_t;
 av_device_t *av_device_new(const char *dev);
 void av_device_destroy(av_device_t *conn);
 
-void av_device_set_address(const av_device_t *dev, const char *address);
+void av_device_set_address(av_device_t *dev, const char *address);
 bool av_device_is_connected(const av_device_t *dev);
 bool av_device_try_connect(const av_device_t *dev);
 

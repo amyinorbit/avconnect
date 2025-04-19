@@ -133,7 +133,8 @@ static void menu_handler(void *menu_ref, void *item_ref) {
 PLUGIN_API int XPluginEnable(void) {
     
     XPLMMenuID plugins = XPLMFindPluginsMenu();
-    plugin_menu = XPLMCreateMenu("AvConnect", plugins, -1, menu_handler, NULL);
+    int menu_item = XPLMAppendMenuItem(plugins, "AvConnect", NULL, 0);
+    plugin_menu = XPLMCreateMenu("AvConnect", plugins, menu_item, menu_handler, NULL);
     XPLMAppendMenuItem(plugin_menu, "Reload Plugins", (void *)MENU_RELOAD, 0);
     settings_init();
     return 1;
