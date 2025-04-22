@@ -54,13 +54,47 @@ void callback_encoder(av_device_t *dev) {
 }
 
 void callback_button(av_device_t *dev) {
-    UNUSED(dev);
-    UNUSED(find_button);
+    static char name[64];
+    if(cmd_mgr_get_arg_str(&dev->mgr, name, sizeof(name)) <= 0)
+        return;
+    av_in_button_t *button = find_button(dev, name);
+    if(button == NULL)
+        return;
+    if(button->cmd.ref == NULL)
+        return;
+    
+    int16_t ev = cmd_mgr_get_arg_int(&dev->mgr);
+    if(ev < 0 || ev > 1)
+        return;
+    
+    if(ev == 1)
+        XPLMCommandBegin(button->cmd.ref);
+    else
+        XPLMCommandEnd(button->cmd.ref);
 }
 
 void callback_mux(av_device_t *dev) {
-    UNUSED(dev);
-    UNUSED(find_mux);
+    static char name[64];
+    if(cmd_mgr_get_arg_str(&dev->mgr, name, sizeof(name)) <= 0)
+        return;
+    av_in_mux_t *mux = find_mux(dev, name);
+    if(mux == NULL)
+        return;
+    
+    int16_t pin = cmd_mgr_get_arg_int(&dev->mgr);
+    if(pin >= mux->pin_count)
+        return;
+    int16_t ev = cmd_mgr_get_arg_int(&dev->mgr);
+    if(ev < 0 || ev > 1)
+        return;
+    
+    if(mux->cmd[pin].ref == NULL)
+        return;
+    
+    if(ev == 1)
+        XPLMCommandBegin(mux->cmd[pin].ref);
+    else
+        XPLMCommandEnd(mux->cmd[pin].ref);
 }
 
 void callback_info(av_device_t *dev) {
