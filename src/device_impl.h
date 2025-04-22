@@ -40,7 +40,7 @@ struct av_device_t {
     input_buf_t         inputs;
     encoder_buf_t       encoders;
     button_buf_t        buttons;
-    mux_buf_t           mux_pins;
+    mux_buf_t           muxes;
     
     cmd_cb_t            callbacks[MAX_CMD_CB];
 };

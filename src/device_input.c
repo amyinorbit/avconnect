@@ -10,16 +10,57 @@
 #include "device_impl.h"
 
 
+static av_in_encoder_t *find_encoder(av_device_t *dev, const char *name) {
+    for(int i = 0; i < dev->encoders.count; ++i) {
+        if(strcmp(dev->encoders.data[i].base.name, name) == 0)
+            return &dev->encoders.data[i];
+    }
+    return NULL;
+}
+
+static av_in_button_t *find_button(av_device_t *dev, const char *name) {
+    for(int i = 0; i < dev->buttons.count; ++i) {
+        if(strcmp(dev->buttons.data[i].base.name, name) == 0)
+            return &dev->buttons.data[i];
+    }
+    return NULL;
+}
+
+static av_in_mux_t *find_mux(av_device_t *dev, const char *name) {
+    for(int i = 0; i < dev->muxes.count; ++i) {
+        if(strcmp(dev->muxes.data[i].base.name, name) == 0)
+            return &dev->muxes.data[i];
+    }
+    return NULL;
+}
+
+
 void callback_encoder(av_device_t *dev) {
-    UNUSED(dev);
+    static char name[64];
+    if(cmd_mgr_get_arg_str(&dev->mgr, name, sizeof(name)) <= 0)
+        return;
+    av_in_encoder_t *encoder = find_encoder(dev, name);
+    if(encoder == NULL)
+        return;
+    
+    int16_t ev = cmd_mgr_get_arg_int(&dev->mgr);
+    if(ev == INT16_MAX)
+        return;
+    
+    if(ev <= 1 && encoder->cmd_dn.ref != NULL)
+        XPLMCommandOnce(encoder->cmd_dn.ref);
+    if(ev >= 2 && encoder->cmd_up.ref != NULL)
+        XPLMCommandOnce(encoder->cmd_up.ref);
 }
 
 void callback_button(av_device_t *dev) {
     UNUSED(dev);
+    UNUSED(find_button);
 }
 
 void callback_mux(av_device_t *dev) {
     UNUSED(dev);
+    UNUSED(find_mux);
 }
 
 void callback_info(av_device_t *dev) {

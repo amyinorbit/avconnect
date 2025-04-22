@@ -150,7 +150,7 @@ int16_t cmd_mgr_get_arg_int(cmd_mgr_t *mgr) {
     char *str = str_buf_get(&mgr->buf_in);
     const char *end = mgr->cmd_end;
     if(!get_next_token(str, end, &tok))
-        return 0;
+        return INT16_MAX;
     
     *tok.end = '\0';
     int16_t val = (int16_t)atoi(tok.start);

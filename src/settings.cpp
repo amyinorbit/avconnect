@@ -22,7 +22,7 @@ public:
         io.IniFilename = nullptr;
         
         SetWindowTitle("AvConnect Settings");
-        SetResizingLimits(500, 210, 500, 1024);
+        SetResizingLimits(500, 210, 1024, 1024);
         
         updatePorts();
     }
@@ -77,12 +77,18 @@ public:
                 }
                 ImGui::BeginTabBar("Bindings");
                 if(ImGui::BeginTabItem("Inputs")) {
-                    buildInputsTab();
+                    if(ImGui::BeginChild("InputsScroll")) {
+                        buildInputsTab();
+                    }
+                    ImGui::EndChild();
                     ImGui::EndTabItem();
                 }
         
                 if(ImGui::BeginTabItem("Outputs")) {
-                    buildOutputsTab();
+                    if(ImGui::BeginChild("OutputsScroll")) {
+                        buildOutputsTab();
+                    }
+                    ImGui::EndChild();
                     ImGui::EndTabItem();
                 }
                 ImGui::EndTabBar();
@@ -102,17 +108,96 @@ public:
     
 private:
     
+    void buildEncoderPad(av_in_encoder_t *encoder) {
+        commandField("Command (down)", &encoder->cmd_dn);
+        commandField("Command (up)", &encoder->cmd_up);
+    }
+    
+    void buildButtonPad(av_in_button_t *button) {
+        commandField("Command", &button->cmd);
+    }
+    
+    void buildMuxPad(av_in_mux_t *mux) {
+        for(int i = 0; i < mux->pin_count; ++i) {
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Command #%d", i+1);
+            commandField(buf, &mux->cmd[i]);
+        }
+        if(ImGui::Button("Add Multiplexer Input") && mux->pin_count < MUX_MAX_PINS) {
+            av_cmd_init(&mux->cmd[mux->pin_count++]);
+        }
+    }
+    
     void buildInputsTab() {
+        if(sel_device == nullptr)
+            return;
+        
+        int to_delete = -1;
+        for(int i = 0; i < av_device_get_in_count(sel_device); ++i) {
+            av_in_t *in = av_device_get_in(sel_device, i);
+            
+            
+            ImGui::PushID(i);
+            const char *header = "Input";
+            switch(in->type) {
+            case AV_IN_ENCODER: header = "Encoder"; break;
+            case AV_IN_BUTTON: header = "Button"; break;
+            case AV_IN_MUX: header = "Multiplexer"; break;
+            }
+            
+            if(!ImGui::CollapsingHeader(header)) {
+                ImGui::PopID();
+                continue;
+            }
+            
+            ImGui::SetNextItemWidth(100);
+            ImGui::InputText("ID", in->name, sizeof(in->name)); ImGui::SameLine();
+            ImGui::InputText("Comment", in->comment, sizeof(in->comment));
+            
+            switch(in->type) {
+            case AV_IN_ENCODER:
+                buildEncoderPad((av_in_encoder_t *)in);
+                break;
+            case AV_IN_BUTTON:
+                buildButtonPad((av_in_button_t *)in);
+                break;
+            case AV_IN_MUX:
+                buildMuxPad((av_in_mux_t *)in);
+                break;
+            }
+            if(ImGui::Button("Delete")) {
+                to_delete = i;
+            }
+            
+            ImGui::PopID();
+        }
+        
+        ImGui::Separator();
+        
+        if(to_delete >= 0 || to_delete < max_devices) {
+            UNUSED(to_delete);
+        }
+        
+        if(ImGui::Button("Add Encoder")) {
+            av_device_add_in_encoder(sel_device);
+        }
+        ImGui::SameLine();
+        if(ImGui::Button("Add Button")) {
+            av_device_add_in_button(sel_device);
+        }
+        ImGui::SameLine();
+        if(ImGui::Button("Add Multiplexer")) {
+            av_device_add_in_mux(sel_device);
+        }
     }
     
     void buildOutputsTab() {
-        
     }
     
     bool portDropdown() {
         bool changed = false;
         
-        if(ImGui::BeginCombo("Ports", sel_port ? sel_port->name : "<none>")) {
+        if(ImGui::BeginCombo("##Ports", sel_port ? sel_port->name : "<none>")) {
             for(int i = 0; i < port_count; ++i) {
                 if(ImGui::Selectable(ports[i].name, &ports[i] == sel_port)) {
                     sel_port = &ports[i];
@@ -129,6 +214,12 @@ private:
         sel_port = nullptr;
         serial_free_list(ports, port_count);
         port_count = serial_list_devices(ports, max_ports);
+    }
+    
+    void commandField(const char *label, av_cmd_t *cmd) {
+        if(ImGui::InputText(label, cmd->path, sizeof(cmd->path))) {
+            cmd->has_changed = true;
+        }
     }
     
     static constexpr int max_ports = 64;
@@ -180,6 +271,6 @@ void settings_fini() {
 
 void settings_open() {
     if(window == nullptr)
-        window = new Settings(50, 50+210, 50+500, 50);
+        window = new Settings(200, 200+300, 50+1024, 50);
     window->SetVisible(true);
 }

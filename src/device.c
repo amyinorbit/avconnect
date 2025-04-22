@@ -27,7 +27,7 @@ av_device_t *av_device_new() {
     input_buf_init(&dev->inputs);
     encoder_buf_init(&dev->encoders);
     button_buf_init(&dev->buttons);
-    mux_buf_init(&dev->mux_pins);
+    mux_buf_init(&dev->muxes);
     
     cmd_mgr_init(&dev->mgr);
     memset(dev->callbacks, 0, sizeof(dev->callbacks));
@@ -45,7 +45,7 @@ void av_device_destroy(av_device_t *dev) {
     input_buf_fini(&dev->inputs);
     encoder_buf_fini(&dev->encoders);
     button_buf_fini(&dev->buttons);
-    mux_buf_fini(&dev->mux_pins);
+    mux_buf_fini(&dev->muxes);
     
     free(dev);
 }
@@ -117,8 +117,8 @@ void av_device_delete_in(av_device_t *dev, int idx) {
         button_buf_remove(&dev->buttons, binding_idx);
         break;
     case AV_IN_MUX:
-        binding_idx = ((av_in_mux_t*)binding) - dev->mux_pins.data;
-        mux_buf_remove(&dev->mux_pins, binding_idx);
+        binding_idx = ((av_in_mux_t*)binding) - dev->muxes.data;
+        mux_buf_remove(&dev->muxes, binding_idx);
         break;
     }
     input_buf_remove(&dev->inputs, idx);
@@ -140,6 +140,7 @@ static void init_binding(void *ptr, av_in_type_t type, size_t size, int num) {
     snprintf(in->comment, sizeof(in->comment), "%s #%d", type_str, num);
 }
 
+
 av_in_encoder_t *av_device_add_in_encoder(av_device_t *dev) {
     if(dev->inputs.count >= MAX_BINDINGS)
         return NULL;
@@ -147,6 +148,9 @@ av_in_encoder_t *av_device_add_in_encoder(av_device_t *dev) {
         return NULL;
     av_in_encoder_t *enc = encoder_buf_add(&dev->encoders);
     init_binding(enc, AV_IN_ENCODER, sizeof(*enc), dev->encoders.count);
+    input_buf_write(&dev->inputs, (av_in_t *)enc);
+    av_cmd_init(&enc->cmd_dn);
+    av_cmd_init(&enc->cmd_up);
     return enc;
 }
 
@@ -157,24 +161,65 @@ av_in_button_t *av_device_add_in_button(av_device_t *dev) {
         return NULL;
     av_in_button_t *button = button_buf_add(&dev->buttons);
     init_binding(button, AV_IN_BUTTON, sizeof(*button), dev->buttons.count);
+    input_buf_write(&dev->inputs, (av_in_t *)button);
+    av_cmd_init(&button->cmd);
     return button;
 }
 
 av_in_mux_t *av_device_add_in_mux(av_device_t *dev) {
     if(dev->inputs.count >= MAX_BINDINGS)
         return NULL;
-    if(dev->mux_pins.count >= MAX_TYPE_BINDINGS)
+    if(dev->muxes.count >= MAX_TYPE_BINDINGS)
         return NULL;
-    av_in_mux_t *mux = mux_buf_add(&dev->mux_pins);
-    init_binding(mux, AV_IN_MUX, sizeof(*mux), dev->mux_pins.count);
+    av_in_mux_t *mux = mux_buf_add(&dev->muxes);
+    init_binding(mux, AV_IN_MUX, sizeof(*mux), dev->muxes.count);
+    input_buf_write(&dev->inputs, (av_in_t *)mux);
+    for(int i = 0; i < MUX_MAX_PINS; ++i) {
+        av_cmd_init(&mux->cmd[i]);
+    }
     return mux;
 }
 
 // MARK: - Device update
 
+static bool resolve_cmd(av_cmd_t *cmd) {
+    if(!cmd->has_changed)
+        return cmd->has_resolved;
+    cmd->ref = XPLMFindCommand(cmd->path);
+    cmd->has_changed = false;
+    return cmd->has_resolved = (cmd->ref != NULL);
+}
+
+static void update_encoder(av_in_encoder_t *enc) {
+    resolve_cmd(&enc->cmd_dn);
+    resolve_cmd(&enc->cmd_up);
+}
+
+static void update_button(av_in_button_t *button) {
+    resolve_cmd(&button->cmd);
+}
+
+static void update_mux(av_in_mux_t *mux) {
+    for(int i = 0; i < mux->pin_count; ++i) {
+        resolve_cmd(&mux->cmd[i]);
+    }
+}
+
+
 void av_device_update(av_device_t *dev) {
     if(dev->serial == NULL)
         return;
+    
+    // Update command bindings if necessary
+    for(int i = 0; i < dev->encoders.count; ++i) {
+        update_encoder(&dev->encoders.data[i]);
+    }
+    for(int i = 0; i < dev->buttons.count; ++i) {
+        update_button(&dev->buttons.data[i]);
+    }
+    for(int i = 0; i < dev->muxes.count; ++i) {
+        update_mux(&dev->muxes.data[i]);
+    }
     
     // Get data from the serial connection
     char buf[512];
@@ -190,15 +235,12 @@ void av_device_update(av_device_t *dev) {
     }
     
     // Feed data to the command manager to actually process stuff
-    if(len > 0) {
-        int16_t cmd = 0;
-        if((cmd = cmd_mgr_get_cmd(&dev->mgr)) >= 0) {
-            if(cmd < MAX_CMD_CB && dev->callbacks[cmd] != NULL) {
-                dev->callbacks[cmd](dev);
-            } else {
-                cmd_mgr_skip_cmd(&dev->mgr);
-            }
+    int16_t cmd = 0;
+    if((cmd = cmd_mgr_get_cmd(&dev->mgr)) >= 0) {
+        if(cmd < MAX_CMD_CB && dev->callbacks[cmd] != NULL) {
+            dev->callbacks[cmd](dev);
         }
+        cmd_mgr_skip_cmd(&dev->mgr);
     }
 }
 

@@ -11,18 +11,20 @@
 #define _INPUTS_H_
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <XPLMUtilities.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
     
+#define MUX_MAX_PINS    (16)
+    
 typedef enum {
     AV_IN_ENCODER,
     AV_IN_BUTTON,
     AV_IN_MUX,
 } av_in_type_t;
-
 
 typedef struct {
     char            path[128];
@@ -51,9 +53,17 @@ typedef struct {
 
 typedef struct {
     av_in_t         base;
-    int             pin;
-    av_cmd_t        cmd;
+    int             pin_count;
+    av_cmd_t        cmd[MUX_MAX_PINS];
 } av_in_mux_t;
+
+
+static inline void av_cmd_init(av_cmd_t *cmd) {
+    cmd->path[0] = '\0';
+    cmd->has_changed = false;
+    cmd->has_resolved = false;
+    cmd->ref = NULL;
+}
 
 #ifdef __cplusplus
 }
