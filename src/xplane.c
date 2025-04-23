@@ -27,7 +27,7 @@
 #include <acfutils/log.h>
 
 #include "xplane.h"
-#include "settings.h"
+#include "avconnect.h"
 
 #define PLUGIN_NAME "AvConnect"
 #define PLUGIN_DESCRIPTION "Connector plugin for serial devices"
@@ -136,12 +136,12 @@ PLUGIN_API int XPluginEnable(void) {
     int menu_item = XPLMAppendMenuItem(plugins, "AvConnect", NULL, 0);
     plugin_menu = XPLMCreateMenu("AvConnect", plugins, menu_item, menu_handler, NULL);
     XPLMAppendMenuItem(plugin_menu, "Reload Plugins", (void *)MENU_RELOAD, 0);
-    settings_init();
+    avconnect_init();
     return 1;
 }
 
 PLUGIN_API void XPluginDisable(void) {
-    settings_fini();
+    avconnect_fini();
     XPLMDestroyMenu(plugin_menu);
 }
 

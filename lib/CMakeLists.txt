@@ -54,3 +54,15 @@ set_target_properties(serial PROPERTIES
     VISIBILITY_INLINES_HIDDEN ON
     POSITION_INDEPENDENT_CODE ON
 )
+
+
+add_library(toml STATIC tomlc99/toml.h tomlc99/toml.c)
+target_compile_options(toml PUBLIC -Wall)
+target_include_directories(toml PUBLIC tomlc99)
+
+set_target_properties(toml PROPERTIES
+    C_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN ON
+    POSITION_INDEPENDENT_CODE ON
+)
+

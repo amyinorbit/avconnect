@@ -37,7 +37,6 @@ typedef struct {
 typedef struct {
     av_in_type_t    type;
     char            name[32];
-    char            comment[64];
 } av_in_t;
 
 typedef struct {

@@ -9,10 +9,10 @@
 */
 #include "device_impl.h"
 
-DEFINE_BUFFER(encoder, av_in_encoder_t, MAX_TYPE_BINDINGS);
-DEFINE_BUFFER(button, av_in_button_t, MAX_TYPE_BINDINGS);
-DEFINE_BUFFER(mux, av_in_mux_t, MAX_TYPE_BINDINGS);
-DEFINE_BUFFER(input, av_in_t *, MAX_BINDINGS);
+DEFINE_BUFFER(encoder, av_in_encoder_t *);
+DEFINE_BUFFER(button, av_in_button_t *);
+DEFINE_BUFFER(mux, av_in_mux_t *);
+DEFINE_BUFFER(input, av_in_t *);
 
 
 
@@ -41,6 +41,14 @@ av_device_t *av_device_new() {
 }
 
 void av_device_destroy(av_device_t *dev) {
+    
+    for(int i = 0; i < dev->encoders.count; ++i)
+        free(dev->encoders.data[i]);
+    for(int i = 0; i < dev->buttons.count; ++i)
+        free(dev->buttons.data[i]);
+    for(int i = 0; i < dev->muxes.count; ++i)
+        free(dev->muxes.data[i]);
+    
     cmd_mgr_fini(&dev->mgr);
     input_buf_fini(&dev->inputs);
     encoder_buf_fini(&dev->encoders);
@@ -83,9 +91,10 @@ void av_device_set_address(av_device_t *dev, const char *address) {
     
     cmd_mgr_send_cmd_start(&dev->mgr, kGetInfo);
     av_device_commit_output(dev);
-    
-    // Send message to get 
-    
+}
+
+const char *av_device_get_address(const av_device_t *dev) {
+    return dev->address;
 }
 
 bool av_device_is_connected(const av_device_t *dev);
@@ -102,52 +111,60 @@ av_in_t *av_device_get_in(av_device_t *dev, int idx) {
     return dev->inputs.data[idx];
 }
 
+static void delete_encoder(av_device_t *dev, av_in_encoder_t *encoder) {
+    for(int i = 0; i < dev->encoders.count; ++i) {
+        if(dev->encoders.data[i] == encoder) {
+            encoder_buf_remove(&dev->encoders, i);
+        }
+    }
+}
+
+static void delete_button(av_device_t *dev, av_in_button_t *button) {
+    for(int i = 0; i < dev->buttons.count; ++i) {
+        if(dev->buttons.data[i] == button) {
+            button_buf_remove(&dev->buttons, i);
+        }
+    }
+}
+
+static void delete_mux(av_device_t *dev, av_in_mux_t *mux) {
+    for(int i = 0; i < dev->muxes.count; ++i) {
+        if(dev->muxes.data[i] == mux) {
+            mux_buf_remove(&dev->muxes, i);
+        }
+    }
+}
+
 void av_device_delete_in(av_device_t *dev, int idx) {
     ASSERT(idx < dev->inputs.count);
-    
-    int binding_idx = 0;
     av_in_t *binding = dev->inputs.data[idx];
     switch(binding->type) {
     case AV_IN_ENCODER:
-        binding_idx = ((av_in_encoder_t*)binding) - dev->encoders.data;
-        encoder_buf_remove(&dev->encoders, binding_idx);
+        delete_encoder(dev, (av_in_encoder_t *)binding);
         break;
     case AV_IN_BUTTON:
-        binding_idx = ((av_in_button_t*)binding) - dev->buttons.data;
-        button_buf_remove(&dev->buttons, binding_idx);
+        delete_button(dev, (av_in_button_t *)binding);
         break;
     case AV_IN_MUX:
-        binding_idx = ((av_in_mux_t*)binding) - dev->muxes.data;
-        mux_buf_remove(&dev->muxes, binding_idx);
+        delete_mux(dev, (av_in_mux_t *)binding);
         break;
     }
     input_buf_remove(&dev->inputs, idx);
+    free(binding);
 }
 
-static void init_binding(void *ptr, av_in_type_t type, size_t size, int num) {
+static void init_binding(void *ptr, av_in_type_t type, size_t size) {
     av_in_t *in = ptr;
     memset(ptr, 0, size);
-    
-    const char *type_str = "";
-    switch(type) {
-        case AV_IN_ENCODER:     type_str = "Encoder";       break;
-        case AV_IN_BUTTON:      type_str = "Button";        break;
-        case AV_IN_MUX:         type_str = "Multiplexer";   break;
-    }
-    
     in->type = type;
     in->name[0] = '\0';
-    snprintf(in->comment, sizeof(in->comment), "%s #%d", type_str, num);
 }
 
 
 av_in_encoder_t *av_device_add_in_encoder(av_device_t *dev) {
-    if(dev->inputs.count >= MAX_BINDINGS)
-        return NULL;
-    if(dev->encoders.count >= MAX_TYPE_BINDINGS)
-        return NULL;
-    av_in_encoder_t *enc = encoder_buf_add(&dev->encoders);
-    init_binding(enc, AV_IN_ENCODER, sizeof(*enc), dev->encoders.count);
+    av_in_encoder_t *enc = safe_calloc(1, sizeof(*enc));
+    init_binding(enc, AV_IN_ENCODER, sizeof(*enc));
+    encoder_buf_write(&dev->encoders, enc);
     input_buf_write(&dev->inputs, (av_in_t *)enc);
     av_cmd_init(&enc->cmd_dn);
     av_cmd_init(&enc->cmd_up);
@@ -155,24 +172,18 @@ av_in_encoder_t *av_device_add_in_encoder(av_device_t *dev) {
 }
 
 av_in_button_t *av_device_add_in_button(av_device_t *dev) {
-    if(dev->inputs.count >= MAX_BINDINGS)
-        return NULL;
-    if(dev->buttons.count >= MAX_TYPE_BINDINGS)
-        return NULL;
-    av_in_button_t *button = button_buf_add(&dev->buttons);
-    init_binding(button, AV_IN_BUTTON, sizeof(*button), dev->buttons.count);
+    av_in_button_t *button = safe_calloc(1, sizeof(*button));
+    init_binding(button, AV_IN_BUTTON, sizeof(*button));
+    button_buf_write(&dev->buttons, button);
     input_buf_write(&dev->inputs, (av_in_t *)button);
     av_cmd_init(&button->cmd);
     return button;
 }
 
 av_in_mux_t *av_device_add_in_mux(av_device_t *dev) {
-    if(dev->inputs.count >= MAX_BINDINGS)
-        return NULL;
-    if(dev->muxes.count >= MAX_TYPE_BINDINGS)
-        return NULL;
-    av_in_mux_t *mux = mux_buf_add(&dev->muxes);
-    init_binding(mux, AV_IN_MUX, sizeof(*mux), dev->muxes.count);
+    av_in_mux_t *mux = safe_calloc(1, sizeof(*mux));
+    init_binding(mux, AV_IN_MUX, sizeof(*mux));
+    mux_buf_write(&dev->muxes, mux);
     input_buf_write(&dev->inputs, (av_in_t *)mux);
     for(int i = 0; i < MUX_MAX_PINS; ++i) {
         av_cmd_init(&mux->cmd[i]);
@@ -212,13 +223,13 @@ void av_device_update(av_device_t *dev) {
     
     // Update command bindings if necessary
     for(int i = 0; i < dev->encoders.count; ++i) {
-        update_encoder(&dev->encoders.data[i]);
+        update_encoder(dev->encoders.data[i]);
     }
     for(int i = 0; i < dev->buttons.count; ++i) {
-        update_button(&dev->buttons.data[i]);
+        update_button(dev->buttons.data[i]);
     }
     for(int i = 0; i < dev->muxes.count; ++i) {
-        update_mux(&dev->muxes.data[i]);
+        update_mux(dev->muxes.data[i]);
     }
     
     // Get data from the serial connection

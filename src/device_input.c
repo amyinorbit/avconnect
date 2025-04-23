@@ -12,24 +12,24 @@
 
 static av_in_encoder_t *find_encoder(av_device_t *dev, const char *name) {
     for(int i = 0; i < dev->encoders.count; ++i) {
-        if(strcmp(dev->encoders.data[i].base.name, name) == 0)
-            return &dev->encoders.data[i];
+        if(strcmp(dev->encoders.data[i]->base.name, name) == 0)
+            return dev->encoders.data[i];
     }
     return NULL;
 }
 
 static av_in_button_t *find_button(av_device_t *dev, const char *name) {
     for(int i = 0; i < dev->buttons.count; ++i) {
-        if(strcmp(dev->buttons.data[i].base.name, name) == 0)
-            return &dev->buttons.data[i];
+        if(strcmp(dev->buttons.data[i]->base.name, name) == 0)
+            return dev->buttons.data[i];
     }
     return NULL;
 }
 
 static av_in_mux_t *find_mux(av_device_t *dev, const char *name) {
     for(int i = 0; i < dev->muxes.count; ++i) {
-        if(strcmp(dev->muxes.data[i].base.name, name) == 0)
-            return &dev->muxes.data[i];
+        if(strcmp(dev->muxes.data[i]->base.name, name) == 0)
+            return dev->muxes.data[i];
     }
     return NULL;
 }

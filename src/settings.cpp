@@ -10,6 +10,7 @@
 #include "settings.h"
 #include "xplane.h"
 #include "device.h"
+#include "avconnect.h"
 #include <serial/serial.h>
 #include <ImgWindow.h>
 #include <acfutils/helpers.h>
@@ -29,9 +30,6 @@ public:
     
     virtual ~Settings() {
         serial_free_list(ports, port_count);
-        for(int i = 0; i < device_count; ++i) {
-            av_device_destroy(devices[i]);
-        }
     }
     
     virtual void buildInterface() override {
@@ -45,20 +43,15 @@ public:
             ImGui::TableNextColumn();
         
             ImGui::PushItemWidth(-1);
-            if(ImGui::Button("Add") && device_count < max_devices) {
-                // TODO: we probably do not want our device register to exist in settings, we
-                // should only be holding referebces
-                devices[device_count] = av_device_new();
-                sel_device = devices[device_count];
-                device_count += 1;
+            if(ImGui::Button("Add")) {
+                avconnect_device_add();
             }
             if(ImGui::BeginListBox("##Devices", ImVec2(-1, -2))) {
                 
-                for(int i = 0; i < device_count; ++i) {
-                    av_device_t *dev = devices[i];
-                    const char *name = av_device_get_name(devices[i]);
-                    if(ImGui::Selectable(name, dev == sel_device)) {
-                        sel_device = dev;
+                for(int i = 0; i < avconnect_get_device_count(); ++i) {
+                    av_device_t *dev = avconnect_device_get(i);
+                    if(ImGui::Selectable(av_device_get_name(dev), i == sel_device_id)) {
+                        sel_device_id = i;
                     }
                 }
                 
@@ -66,11 +59,10 @@ public:
             }
             
             ImGui::TableNextColumn();
-            if(sel_device != nullptr) {
+            if(sel_device_id >= 0) {
+                av_device_t *sel_device = avconnect_device_get(sel_device_id);
                 ImGui::Text("%s", av_device_get_name(sel_device));
-                if(portDropdown()) {
-                    av_device_set_address(sel_device, sel_port->address);
-                }
+                portDropdown(sel_device);
                 ImGui::SameLine();
                 if(ImGui::Button("Scan")) {
                     updatePorts();
@@ -78,7 +70,7 @@ public:
                 ImGui::BeginTabBar("Bindings");
                 if(ImGui::BeginTabItem("Inputs")) {
                     if(ImGui::BeginChild("InputsScroll")) {
-                        buildInputsTab();
+                        buildInputsTab(sel_device);
                     }
                     ImGui::EndChild();
                     ImGui::EndTabItem();
@@ -86,7 +78,7 @@ public:
         
                 if(ImGui::BeginTabItem("Outputs")) {
                     if(ImGui::BeginChild("OutputsScroll")) {
-                        buildOutputsTab();
+                        buildOutputsTab(sel_device);
                     }
                     ImGui::EndChild();
                     ImGui::EndTabItem();
@@ -98,11 +90,6 @@ public:
             }
             
             ImGui::EndTable();
-        }
-        
-        // TODO: move this to a flight loop callback
-        for(int i = 0; i < device_count; ++i) {
-            av_device_update(devices[i]);
         }
     }
     
@@ -128,7 +115,7 @@ private:
         }
     }
     
-    void buildInputsTab() {
+    void buildInputsTab(av_device_t *sel_device) {
         if(sel_device == nullptr)
             return;
         
@@ -151,8 +138,7 @@ private:
             }
             
             ImGui::SetNextItemWidth(100);
-            ImGui::InputText("ID", in->name, sizeof(in->name)); ImGui::SameLine();
-            ImGui::InputText("Comment", in->comment, sizeof(in->comment));
+            ImGui::InputText("ID", in->name, sizeof(in->name));
             
             switch(in->type) {
             case AV_IN_ENCODER:
@@ -174,8 +160,8 @@ private:
         
         ImGui::Separator();
         
-        if(to_delete >= 0 || to_delete < max_devices) {
-            UNUSED(to_delete);
+        if(to_delete >= 0 && to_delete < av_device_get_in_count(sel_device)) {
+            av_device_delete_in(sel_device, to_delete);
         }
         
         if(ImGui::Button("Add Encoder")) {
@@ -189,29 +175,29 @@ private:
         if(ImGui::Button("Add Multiplexer")) {
             av_device_add_in_mux(sel_device);
         }
-    }
-    
-    void buildOutputsTab() {
-    }
-    
-    bool portDropdown() {
-        bool changed = false;
         
-        if(ImGui::BeginCombo("##Ports", sel_port ? sel_port->name : "<none>")) {
+        if(ImGui::Button("Save configuration")) {
+            avconnect_conf_save(false);
+        }
+    }
+    
+    void buildOutputsTab(av_device_t *sel_device) {
+        UNUSED(sel_device);
+    }
+    
+    void portDropdown(av_device_t *dev) {
+        const char *sel_port = av_device_get_address(dev);
+        if(ImGui::BeginCombo("##Ports", sel_port)) {
             for(int i = 0; i < port_count; ++i) {
-                if(ImGui::Selectable(ports[i].name, &ports[i] == sel_port)) {
-                    sel_port = &ports[i];
-                    changed = true;
+                if(ImGui::Selectable(ports[i].name)) {
+                    av_device_set_address(dev, ports[i].address);
                 }
             }
             ImGui::EndCombo();
         }
-        
-        return changed;
     }
     
     void updatePorts() {
-        sel_port = nullptr;
         serial_free_list(ports, port_count);
         port_count = serial_list_devices(ports, max_ports);
     }
@@ -223,15 +209,10 @@ private:
     }
     
     static constexpr int max_ports = 64;
-    static constexpr int max_devices = 16;
-
-    serial_info_t   *sel_port = nullptr;
     serial_info_t   ports[max_ports];
     int             port_count = 0;
     
-    av_device_t     *devices[max_devices];
-    int             device_count = 0;
-    av_device_t     *sel_device = nullptr;
+    int             sel_device_id = -1;
 };
 
 

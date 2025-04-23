@@ -17,14 +17,12 @@
 #include <serial/serial.h>
 #include <acfutils/helpers.h>
 
-#define MAX_BINDINGS        (128)
-#define MAX_TYPE_BINDINGS   (32)
 #define MAX_CMD_CB      (34)
 
-DECLARE_BUFFER(encoder, av_in_encoder_t, MAX_TYPE_BINDINGS);
-DECLARE_BUFFER(button, av_in_button_t, MAX_TYPE_BINDINGS);
-DECLARE_BUFFER(mux, av_in_mux_t, MAX_TYPE_BINDINGS);
-DECLARE_BUFFER(input, av_in_t *, MAX_BINDINGS);
+DECLARE_BUFFER(encoder, av_in_encoder_t *);
+DECLARE_BUFFER(button, av_in_button_t *);
+DECLARE_BUFFER(mux, av_in_mux_t *);
+DECLARE_BUFFER(input, av_in_t *);
 
 typedef void (*cmd_cb_t)(av_device_t *dev);
 
