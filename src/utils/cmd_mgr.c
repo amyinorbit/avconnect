@@ -183,14 +183,19 @@ int cmd_mgr_get_arg_str(cmd_mgr_t *mgr, char *buf, int cap) {
     *tok.end = '\0';
     
     int len = tok.end - tok.start;
-    int to_copy = len > cap-1 ? cap - 1 : len;
+    int to_copy = len;
     if(cap) {
+        if(to_copy > cap - 1)
+            to_copy = cap - 1;
         memcpy(buf, tok.start, to_copy);
         buf[to_copy] = '\0';
+        // We only remove the string if we have a buffer to copy to,
+        // so that calling code can call with NULL/0 to query required
+        // length first, then call again to fill the buffer
+        str_buf_pop_front(&mgr->buf_in, len + 1);
     }
     
-    str_buf_pop_front(&mgr->buf_in, len + 1);
-    return true;
+    return to_copy;
 }
 
 void cmd_mgr_skip_cmd(cmd_mgr_t *mgr) {
