@@ -36,6 +36,13 @@ static av_in_mux_t *find_mux(av_device_t *dev, const char *name) {
 
 
 void callback_encoder(av_device_t *dev) {
+    enum {
+        EV_DOWN_FAST    = 0,
+        EV_DOWN         = 1,
+        EV_UP           = 2,
+        EV_UP_FAST      = 3
+    };
+    
     static char name[64];
     if(cmd_mgr_get_arg_str(&dev->mgr, name, sizeof(name)) <= 0)
         return;
@@ -47,10 +54,30 @@ void callback_encoder(av_device_t *dev) {
     if(ev == INT16_MAX)
         return;
     
-    if(ev <= 1 && encoder->cmd_dn.ref != NULL)
-        XPLMCommandOnce(encoder->cmd_dn.ref);
-    if(ev >= 2 && encoder->cmd_up.ref != NULL)
-        XPLMCommandOnce(encoder->cmd_up.ref);
+    switch(ev) {
+    case EV_DOWN_FAST:
+        if(encoder->cmd_dn.ref != NULL) {
+            XPLMCommandOnce(encoder->cmd_dn.ref);
+            XPLMCommandOnce(encoder->cmd_dn.ref);
+        }
+        break;
+    case EV_DOWN:
+        if(encoder->cmd_dn.ref != NULL) {
+            XPLMCommandOnce(encoder->cmd_dn.ref);
+        }
+        break;
+    case EV_UP_FAST:
+        if(encoder->cmd_up.ref != NULL) {
+            XPLMCommandOnce(encoder->cmd_up.ref);
+            XPLMCommandOnce(encoder->cmd_up.ref);
+        }
+        break;
+    case EV_UP:
+        if(encoder->cmd_dn.ref != NULL) {
+            XPLMCommandOnce(encoder->cmd_up.ref);
+        }
+        break;
+    }
 }
 
 void callback_button(av_device_t *dev) {
@@ -82,7 +109,7 @@ void callback_mux(av_device_t *dev) {
         return;
     
     int16_t pin = cmd_mgr_get_arg_int(&dev->mgr);
-    if(pin >= mux->pin_count)
+    if(pin >= AV_MUX_MAX_PINS)
         return;
     int16_t ev = cmd_mgr_get_arg_int(&dev->mgr);
     if(ev < 0 || ev > 1)
@@ -98,21 +125,16 @@ void callback_mux(av_device_t *dev) {
 }
 
 void callback_info(av_device_t *dev) {
-    /*
-    cmd_mgr_get_arg_str(mgr, NULL, 0);
-    char name[64], serial_num[64];
-    cmd_mgr_get_arg_str(mgr, name, sizeof(name));
-    cmd_mgr_get_arg_str(mgr, serial_num, sizeof(serial_num));
-    cmd_mgr_get_arg_str(mgr, NULL, 0);
-    cmd_mgr_get_arg_str(mgr, NULL, 0);
     
-    printf("info\t%s === %s\n", name, serial_num);
-    */
-    // char                name[128];
-    // char                serial_no[128];
+    char buf_ignore[16];
     
-    cmd_mgr_get_arg_str(&dev->mgr, NULL, 0); // ignore <>
+    cmd_mgr_get_arg_str(&dev->mgr, buf_ignore, sizeof(buf_ignore)); // ignore <>
     cmd_mgr_get_arg_str(&dev->mgr, dev->name, sizeof(dev->name));
     cmd_mgr_get_arg_str(&dev->mgr, dev->serial_no, sizeof(dev->serial_no));
     cmd_mgr_skip_cmd(&dev->mgr); // Ignore <> and <>
+}
+
+void callback_config(av_device_t *dev) {
+    UNUSED(dev);
+    
 }

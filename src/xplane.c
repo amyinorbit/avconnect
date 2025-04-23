@@ -36,6 +36,7 @@
 static char xplane_dir[512];
 static char plane_dir[512];
 static char plugin_dir[512];
+static char conf_dir[512];
 static XPLMMenuID plugin_menu = NULL;
 
 static void fix_path(char *path) {
@@ -54,10 +55,13 @@ static void get_paths() {
 	XPLMGetPluginInfo(XPLMGetMyID(), NULL, plugin_dir, NULL, NULL);
     XPLMGetNthAircraftModel(XPLM_USER_AIRCRAFT, name, plane_dir);
     
+    snprintf(conf_dir, sizeof(conf_dir), "%s/Output/Preferences", xplane_dir);
+    
 #if	IBM
 	fix_pathsep(xplane_dir);
 	fix_pathsep(plugin_dir);
 	fix_pathsep(plane_dir);
+	fix_pathsep(conf_dir);
 #endif	/* IBM */
     
 	/* cut off the trailing path component (our filename) */
@@ -84,6 +88,7 @@ static void get_paths() {
     fix_path(plugin_dir);
     fix_path(xplane_dir);
     fix_path(plane_dir);
+    fix_path(conf_dir);
 }
 
 static void log_printer(const char *msg) {
@@ -137,6 +142,7 @@ PLUGIN_API int XPluginEnable(void) {
     plugin_menu = XPLMCreateMenu("AvConnect", plugins, menu_item, menu_handler, NULL);
     XPLMAppendMenuItem(plugin_menu, "Reload Plugins", (void *)MENU_RELOAD, 0);
     avconnect_init();
+    avconnect_conf_check_reload(false);
     return 1;
 }
 
@@ -149,6 +155,15 @@ PLUGIN_API void XPluginReceiveMessage(XPLMPluginID from, int msg, void *param) {
     UNUSED(from);
     UNUSED(msg);
     UNUSED(param);
+    
+    switch(msg) {
+        case XPLM_MSG_PLANE_LOADED:
+        if((intptr_t)param == 0) {
+            get_paths();
+            avconnect_conf_check_reload(true);
+        }
+        break;
+    }
 }
 
 const char *get_plugin_dir(void) {
@@ -161,6 +176,10 @@ const char *get_xplane_dir(void) {
 
 const char *get_plane_dir(void) {
     return plane_dir;
+}
+
+const char *get_conf_dir(void) {
+    return conf_dir;
 }
 
 XPLMMenuID get_plugin_menu(void) {

@@ -20,9 +20,10 @@ extern "C" {
 void avconnect_init();
 void avconnect_fini();
 
-void avconnect_conf_check_reload();
+void avconnect_conf_check_reload(bool acf_specific);
 void avconnect_conf_save(bool acf_specific);
 
+void avconnect_device_delete_all();
 int avconnect_get_device_count();
 av_device_t *avconnect_device_get(int i);
 av_device_t *avconnect_device_add();

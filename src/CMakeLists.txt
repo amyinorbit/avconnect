@@ -2,6 +2,7 @@ set(PLUGIN_SRC
     utils/str_buf.c
     utils/cmd_mgr.c
     avconnect.c
+    avconnect_cfg.c
     device.c
     device_cfg.c
     device_input.c

@@ -39,6 +39,8 @@ PLUGIN_API void XPluginReceiveMessage(XPLMPluginID from, int msg, void *param);
 const char *get_plugin_dir(void);
 const char *get_xplane_dir(void);
 const char *get_plane_dir(void);
+const char *get_conf_dir(void);
+
 XPLMMenuID get_plugin_menu(void);
 
 #ifdef __cplusplus

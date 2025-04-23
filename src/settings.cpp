@@ -46,6 +46,10 @@ public:
             if(ImGui::Button("Add")) {
                 avconnect_device_add();
             }
+            ImGui::SameLine();
+            if(ImGui::Button("Read")) {
+                avconnect_conf_check_reload(true);
+            }
             if(ImGui::BeginListBox("##Devices", ImVec2(-1, -2))) {
                 
                 for(int i = 0; i < avconnect_get_device_count(); ++i) {
@@ -105,13 +109,10 @@ private:
     }
     
     void buildMuxPad(av_in_mux_t *mux) {
-        for(int i = 0; i < mux->pin_count; ++i) {
+        for(int i = 0; i < AV_MUX_MAX_PINS; ++i) {
             char buf[32];
-            snprintf(buf, sizeof(buf), "Command #%d", i+1);
+            snprintf(buf, sizeof(buf), "Command #%d", i);
             commandField(buf, &mux->cmd[i]);
-        }
-        if(ImGui::Button("Add Multiplexer Input") && mux->pin_count < MUX_MAX_PINS) {
-            av_cmd_init(&mux->cmd[mux->pin_count++]);
         }
     }
     

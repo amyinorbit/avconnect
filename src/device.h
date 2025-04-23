@@ -37,6 +37,10 @@ av_in_encoder_t *av_device_add_in_encoder(av_device_t *dev);
 av_in_button_t *av_device_add_in_button(av_device_t *dev);
 av_in_mux_t *av_device_add_in_mux(av_device_t *dev);
 
+av_in_encoder_t *av_device_add_in_encoder_str(av_device_t *dev, const char *name);
+av_in_button_t *av_device_add_in_button_str(av_device_t *dev, const char *name);
+av_in_mux_t *av_device_add_in_mux_str(av_device_t *dev, const char *name);
+
 void av_device_update(av_device_t *dev);
 
 void av_device_write(const av_device_t *dev, FILE *out);

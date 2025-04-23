@@ -18,7 +18,7 @@
 extern "C" {
 #endif
     
-#define MUX_MAX_PINS    (16)
+#define AV_MUX_MAX_PINS    (16)
     
 typedef enum {
     AV_IN_ENCODER,
@@ -52,8 +52,7 @@ typedef struct {
 
 typedef struct {
     av_in_t         base;
-    int             pin_count;
-    av_cmd_t        cmd[MUX_MAX_PINS];
+    av_cmd_t        cmd[AV_MUX_MAX_PINS];
 } av_in_mux_t;
 
 
