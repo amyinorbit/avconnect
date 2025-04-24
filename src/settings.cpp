@@ -23,7 +23,7 @@ public:
         io.IniFilename = nullptr;
         
         SetWindowTitle("AvConnect Settings");
-        SetResizingLimits(500, 210, 1024, 1024);
+        SetResizingLimits(800, 210, 800, 1024);
         
         updatePorts();
     }
@@ -35,14 +35,14 @@ public:
     virtual void buildInterface() override {
         
         
-        ImGui::PushItemWidth(-1);
+        // ImGui::PushItemWidth(-1);
         if(ImGui::BeginTable("DeviceListLayout", 2)) {
         	ImGui::TableSetupColumn("Device List", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, 140);
         	ImGui::TableSetupColumn("Device Details", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoSort);
             
             ImGui::TableNextColumn();
         
-            ImGui::PushItemWidth(-1);
+            // ImGui::PushItemWidth(-1);
             if(ImGui::Button("Add")) {
                 avconnect_device_add();
             }
@@ -110,9 +110,11 @@ private:
     
     void buildMuxPad(av_in_mux_t *mux) {
         for(int i = 0; i < AV_MUX_MAX_PINS; ++i) {
+            ImGui::PushID(i);
             char buf[32];
             snprintf(buf, sizeof(buf), "Command #%d", i);
             commandField(buf, &mux->cmd[i]);
+            ImGui::PopID();
         }
     }
     
@@ -138,22 +140,34 @@ private:
                 continue;
             }
             
-            ImGui::SetNextItemWidth(100);
-            ImGui::InputText("ID", in->name, sizeof(in->name));
+            if(ImGui::BeginTable("InputLayout", 2, ImGuiTableFlags_SizingStretchProp)) {
+                
+                ImGui::TableSetupColumn("Labels", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, 100);
+                ImGui::TableSetupColumn("Fields", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoSort);
+                ImGui::TableNextColumn();
+                
+                ImGui::Text("Name/ID");
+                ImGui::PushItemWidth(-1);
+                ImGui::TableNextColumn();
+                ImGui::PopItemWidth();
+                ImGui::InputText("##ID", in->name, sizeof(in->name));
             
-            switch(in->type) {
-            case AV_IN_ENCODER:
-                buildEncoderPad((av_in_encoder_t *)in);
-                break;
-            case AV_IN_BUTTON:
-                buildButtonPad((av_in_button_t *)in);
-                break;
-            case AV_IN_MUX:
-                buildMuxPad((av_in_mux_t *)in);
-                break;
-            }
-            if(ImGui::Button("Delete")) {
-                to_delete = i;
+                switch(in->type) {
+                case AV_IN_ENCODER:
+                    buildEncoderPad((av_in_encoder_t *)in);
+                    break;
+                case AV_IN_BUTTON:
+                    buildButtonPad((av_in_button_t *)in);
+                    break;
+                case AV_IN_MUX:
+                    buildMuxPad((av_in_mux_t *)in);
+                    break;
+                }
+                if(ImGui::Button("Delete")) {
+                    to_delete = i;
+                }
+                
+                ImGui::EndTable();
             }
             
             ImGui::PopID();
@@ -185,21 +199,33 @@ private:
 #define COUNTOF(ar) (sizeof(ar) / sizeof(*ar))
     
     void buildPWMPad(av_out_pwm_t *pwm) {
-        drefField("dataref", &pwm->dref);
+        drefField("DataRef", &pwm->dref);
         // ImGui::SameLine();
+        
+        ImGui::TableNextColumn();
+        ImGui::PushItemWidth(-1);
         dropdown("##mod_op", av_mod_str, COUNTOF(av_mod_str), (int&)pwm->mod_op);
-        // ImGui::SameLine();
+        ImGui::PopItemWidth();
+        ImGui::TableNextColumn();
+        ImGui::PushItemWidth(-1);
         ImGui::InputFloat("##mod_val", &pwm->mod_val);
+        ImGui::PopItemWidth();
     }
     
     void buildShiftRegPad(av_out_sreg_t *sreg) {
         for(int i = 0; i < AV_SREG_MAX_PINS; ++i) {
             ImGui::PushID(i);
-            drefField("dataref", &sreg->pins[i].dref);
-            // ImGui::SameLine();
+            char buf[64];
+            snprintf(buf, sizeof(buf), "DataRef #%d", i);
+            drefField(buf, &sreg->pins[i].dref);
+            ImGui::TableNextColumn();
+            ImGui::PushItemWidth(-1);
             dropdown("##cmp_op", av_cmp_str, COUNTOF(av_cmp_str), (int&)sreg->pins[i].cmp_op);
-            // ImGui::SameLine();
+            ImGui::PopItemWidth();
+            ImGui::TableNextColumn();
+            ImGui::PushItemWidth(-1);
             ImGui::InputFloat("##cmp_val", &sreg->pins[i].cmp_val);
+            ImGui::PopItemWidth();
             ImGui::PopID();
         }
     }
@@ -224,15 +250,43 @@ private:
                 continue;
             }
             
-            ImGui::InputInt("ID", &out->id);
+            if(ImGui::BeginTable("InputLayout", 2, ImGuiTableFlags_SizingStretchProp)) {
+                
+                ImGui::TableSetupColumn("Labels", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, 100);
+                ImGui::TableSetupColumn("Fields", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoSort);
+                ImGui::TableNextColumn();
+                
+                if(out->type == AV_OUT_SHIFT_REG)
+                    ImGui::Text("Module");
+                else
+                    ImGui::Text("Pin");
+                ImGui::TableNextColumn();
+                ImGui::PushItemWidth(-1);
+                ImGui::InputInt("##ID", &out->id);
+                ImGui::PopItemWidth();
+                
+                ImGui::EndTable();
+            }
             
-            switch(out->type) {
-            case AV_OUT_PWM:
-                buildPWMPad((av_out_pwm_t *)out);
-                break;
-            case AV_OUT_SHIFT_REG:
-                buildShiftRegPad((av_out_sreg_t *)out);
-                break;
+            
+            if(ImGui::BeginTable("OutputDRLayout", 4, ImGuiTableFlags_SizingStretchProp)) {
+                
+                ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, 100);
+                ImGui::TableSetupColumn("Dataref", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoSort);
+                ImGui::TableSetupColumn("Operator", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, 60);
+                ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, 60);
+                
+                switch(out->type) {
+                case AV_OUT_PWM:
+                    buildPWMPad((av_out_pwm_t *)out);
+                    break;
+                case AV_OUT_SHIFT_REG:
+                    buildShiftRegPad((av_out_sreg_t *)out);
+                    break;
+                }
+                
+                
+                ImGui::EndTable();
             }
             
             if(ImGui::Button("Delete")) {
@@ -275,9 +329,25 @@ private:
     }
     
     void commandField(const char *label, av_cmd_t *cmd) {
-        if(ImGui::InputText(label, cmd->path, sizeof(cmd->path))) {
+        ImGui::TableNextColumn();
+        ImGui::Text("%s", label);
+        ImGui::TableNextColumn();
+        
+        if(cmd->has_resolved) {
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, IM_COL32(0, 255, 0, 80));
+        }
+        
+        char id[64];
+        snprintf(id, sizeof(id), "##%s", label);
+        ImGui::PushItemWidth(-1);
+        if(ImGui::InputText(id, cmd->path, sizeof(cmd->path))) {
             av_cmd_end(cmd);
             cmd->has_changed = true;
+        }
+        ImGui::PopItemWidth();
+        
+        if(cmd->has_resolved) {
+            ImGui::PopStyleColor();
         }
     }
     
@@ -296,11 +366,26 @@ private:
     }
     
     void drefField(const char *label, av_dref_t *dref) {
-        if(!ImGui::InputText(label, dref->path, sizeof(dref->path)))
-            return;
-        dref->has_changed = true;
-        dref->has_resolved = false;
-        dref->type = AV_TYPE_INVALID;
+        
+        ImGui::TableNextColumn();
+        ImGui::Text("%s", label);
+        ImGui::TableNextColumn();
+        
+        if(dref->has_resolved) {
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, IM_COL32(0, 255, 0, 80));
+        }
+        
+        ImGui::PushItemWidth(-1);
+        if(ImGui::InputText(label, dref->path, sizeof(dref->path))) {
+            dref->has_changed = true;
+            dref->has_resolved = false;
+            dref->type = AV_TYPE_INVALID;
+        }
+        ImGui::PopItemWidth();
+        
+        if(dref->has_resolved) {
+            ImGui::PopStyleColor();
+        }
     }
     
     static constexpr int max_ports = 64;
@@ -332,6 +417,8 @@ void settings_init() {
     VERIFY(show_settings);
     XPLMRegisterCommandHandler(show_settings, handle_show, false, nullptr);
     menu_item = XPLMAppendMenuItemWithCommand(get_plugin_menu(), "Settings…", show_settings);
+    
+    settings_open();
 }
 
 void settings_fini() {
@@ -347,6 +434,6 @@ void settings_fini() {
 
 void settings_open() {
     if(window == nullptr)
-        window = new Settings(200, 200+300, 50+1024, 50);
+        window = new Settings(200, 200+300, 50+600, 50);
     window->SetVisible(true);
 }

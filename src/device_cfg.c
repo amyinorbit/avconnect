@@ -55,11 +55,11 @@ static void write_mux(FILE *out, const av_in_mux_t *mux) {
         if(!strlen(mux->cmd[i].path))
             continue;
         
-        if(done_first) {
+        if(!done_first) {
             done_first = true;
             fprintf(out, "    { ");
         } else {
-            fprintf(out, ",\n    {");
+            fprintf(out, ",\n    { ");
         }
         write_string(out, "name", mux->base.name, ", ");
         write_int(out, "input", i, ", ");
@@ -70,7 +70,7 @@ static void write_mux(FILE *out, const av_in_mux_t *mux) {
 static void write_pwm(FILE *out, const av_out_pwm_t *pwm) {
     fprintf(out, "    { ");
     write_int(out, "pin", pwm->base.id, ", ");
-    write_string(out, "dataref", pwm->dref.path, " ,");
+    write_string(out, "dataref", pwm->dref.path, ", ");
     write_string(out, "op", av_mod_str[pwm->mod_op], ", ");
     write_float(out, "val", pwm->mod_val, " }");
 }
@@ -81,7 +81,7 @@ static void write_sreg(FILE *out, const av_out_sreg_t *sreg) {
         const av_out_sreg_pin_t *pin = &sreg->pins[i];
         if(!strlen(pin->dref.path))
             continue;
-        if(done_first) {
+        if(!done_first) {
             done_first = true;
             fprintf(out, "    { ");
         } else {
