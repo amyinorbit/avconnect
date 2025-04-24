@@ -224,7 +224,6 @@ private:
                 continue;
             }
             
-            ImGui::InputText("Name", out->name, sizeof(out->name));
             ImGui::InputInt("ID", &out->id);
             
             switch(out->type) {

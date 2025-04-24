@@ -74,7 +74,6 @@ static void parse_mux(av_device_t *dev, toml_table_t *cmux) {
     CHECK(pin, "missing multiplexer input");
     CHECK(cmd, "missing multiplexer command");
     
-    av_in_mux_t *mux = av_device_add_in_mux_str(dev, name.u.s);
     
     int p = pin.u.i;
     if(p >= AV_MUX_MAX_PINS) {
@@ -82,12 +81,101 @@ static void parse_mux(av_device_t *dev, toml_table_t *cmux) {
         goto out;
     }
     
+    av_in_mux_t *mux = av_device_add_in_mux_str(dev, name.u.s);
+    
     lacf_strlcpy(mux->cmd[p].path, cmd.u.s, sizeof(mux->cmd[p].path));
     mux->cmd[p].has_changed = true;
     
 out:
     if(name.ok) free(name.u.s);
     if(cmd.ok) free(cmd.u.s);
+}
+
+#define COUNTOF(x) (sizeof(x)/sizeof(*x))
+
+static int find_str_in(const char **array, int n, const char *str) {
+    for(int i = 0; i < n; ++i) {
+        if(strcmp(array[i], str) == 0)
+            return i;
+    }
+    return -1;
+}
+
+static void parse_pwm(av_device_t *dev, toml_table_t *cpwm) {
+    if(cpwm == NULL) {
+        logMsg("PWM mapping must be a table");
+        return;
+    }
+    
+    toml_datum_t id = toml_int_in(cpwm, "pin");
+    toml_datum_t dref = toml_string_in(cpwm, "dataref");
+    toml_datum_t mod_str = toml_string_in(cpwm, "op");
+    toml_datum_t val = toml_double_in(cpwm, "val");
+    
+    CHECK(id, "missing pwm output pin number");
+    CHECK(dref, "missing pwm output dataref");
+    CHECK(mod_str, "missing pwm output modifier");
+    CHECK(val, "missing pwm output modifier value");
+    
+    int mod = find_str_in(av_mod_str, COUNTOF(av_mod_str), mod_str.u.s);
+    if(mod < 0) {
+        logMsg("invalid dataref modifier: %s", mod_str.u.s);
+        goto out;
+    }
+    
+    av_out_pwm_t *pwm = av_device_add_out_pwm_id(dev, id.u.i);
+    ASSERT(pwm != NULL);
+    
+    lacf_strlcpy(pwm->dref.path, dref.u.s, sizeof(pwm->dref.path));
+    pwm->mod_op = mod;
+    pwm->mod_val = val.u.d;
+    
+out:
+    if(dref.ok) free(dref.u.s);
+    if(mod_str.ok) free(mod_str.u.s);
+}
+
+static void parse_sreg(av_device_t *dev, toml_table_t *csreg) {
+    if(csreg == NULL) {
+        logMsg("PWM mapping must be a table");
+        return;
+    }
+    
+    toml_datum_t mod = toml_int_in(csreg, "module");
+    toml_datum_t pin_n = toml_int_in(csreg, "output");
+    toml_datum_t dref = toml_string_in(csreg, "dataref");
+    toml_datum_t cmp_str = toml_string_in(csreg, "op");
+    toml_datum_t val = toml_double_in(csreg, "val");
+    
+    CHECK(mod, "missing shift register output name");
+    CHECK(pin_n, "missing shift register output pin number");
+    CHECK(dref, "missing shift register output dataref");
+    CHECK(cmp_str, "missing shift register output modifier");
+    CHECK(val, "missing shift register output modifier value");
+    
+    int cmp = find_str_in(av_cmp_str, COUNTOF(av_cmp_str), cmp_str.u.s);
+    if(cmp < 0) {
+        logMsg("invalid dataref comparison operator: %s", cmp_str.u.s);
+        goto out;
+    }
+    
+    if(pin_n.u.i >= AV_SREG_MAX_PINS) {
+        logMsg("invalid shift register pin number: %d", (int)pin_n.u.i);
+        goto out;
+    }
+    
+    av_out_sreg_t *sreg = av_device_add_out_sreg_id(dev, mod.u.i);
+    ASSERT(sreg != NULL);
+    
+    av_out_sreg_pin_t *pin = &sreg->pins[pin_n.u.i];
+    
+    lacf_strlcpy(pin->dref.path, dref.u.s, sizeof(pin->dref.path));
+    pin->cmp_op = cmp;
+    pin->cmp_val = val.u.d;
+    
+out:
+    if(dref.ok) free(dref.u.s);
+    if(cmp_str.ok) free(cmp_str.u.s);
 }
 
 void do_read_conf(char *path) {
@@ -145,6 +233,18 @@ void do_read_conf(char *path) {
         if(muxes) {
             for(int i = 0; i < toml_array_nelem(muxes); ++i)
                 parse_mux(dev, toml_table_at(muxes, i));
+        }
+        
+        toml_array_t *pwms = toml_array_in(cdev, "out_pwms");
+        if(pwms) {
+            for(int i = 0; i < toml_array_nelem(pwms); ++i)
+                parse_pwm(dev, toml_table_at(pwms, i));
+        }
+        
+        toml_array_t *sregs = toml_array_in(cdev, "out_shift_regs");
+        if(sregs) {
+            for(int i = 0; i < toml_array_nelem(sregs); ++i)
+                parse_sreg(dev, toml_table_at(sregs, i));
         }
         
         free(address.u.s);

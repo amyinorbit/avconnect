@@ -60,7 +60,6 @@ static void init_binding(void *ptr, av_out_type_t type, size_t size) {
     memset(ptr, 0, size);
     out->type = type;
     out->id = 0;
-    out->name[0] = '\0';
 }
 
 av_out_sreg_t *av_device_add_out_sreg(av_device_t *dev) {

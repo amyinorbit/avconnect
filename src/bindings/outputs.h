@@ -72,7 +72,6 @@ typedef enum {
 
 typedef struct {
     av_out_type_t   type;
-    char            name[32];
     int             id;
 } av_out_t;
 
