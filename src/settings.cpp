@@ -205,6 +205,7 @@ private:
     
     void commandField(const char *label, av_cmd_t *cmd) {
         if(ImGui::InputText(label, cmd->path, sizeof(cmd->path))) {
+            av_cmd_end(cmd);
             cmd->has_changed = true;
         }
     }

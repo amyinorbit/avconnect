@@ -27,7 +27,7 @@ const char *av_device_get_name(const av_device_t *dev);
 void av_device_set_address(av_device_t *dev, const char *address);
 const char *av_device_get_address(const av_device_t *dev);
 bool av_device_is_connected(const av_device_t *dev);
-bool av_device_try_connect(const av_device_t *dev);
+bool av_device_try_connect(av_device_t *dev);
 
 int av_device_get_in_count(const av_device_t *dev);
 av_in_t *av_device_get_in(av_device_t *dev, int idx);

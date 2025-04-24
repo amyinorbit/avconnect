@@ -40,8 +40,26 @@ av_device_t *av_device_new() {
     return dev;
 }
 
+static void end_commands(av_device_t *dev) {
+    for(int i = 0; i < dev->encoders.count; ++i) {
+        av_in_encoder_t *encoder = dev->encoders.data[i];
+        av_cmd_end(&encoder->cmd_dn);
+        av_cmd_end(&encoder->cmd_up);
+    }
+    for(int i = 0; i < dev->buttons.count; ++i) {
+        av_in_button_t *button = dev->buttons.data[i];
+        av_cmd_end(&button->cmd);
+    }
+    for(int i = 0; i < dev->muxes.count; ++i) {
+        av_in_mux_t *mux = dev->muxes.data[i];
+        for(int j = 0; j < AV_MUX_MAX_PINS; ++j) {
+            av_cmd_end(&mux->cmd[j]);
+        }
+    }
+}
+
 void av_device_destroy(av_device_t *dev) {
-    
+    end_commands(dev);
     for(int i = 0; i < dev->encoders.count; ++i)
         free(dev->encoders.data[i]);
     for(int i = 0; i < dev->buttons.count; ++i)
@@ -83,22 +101,31 @@ void av_device_set_address(av_device_t *dev, const char *address) {
     cmd_mgr_init(&dev->mgr);
 
     lacf_strlcpy(dev->address, address, sizeof(dev->address));
-    lacf_strlcpy(dev->name, "Fetching device name...", sizeof(dev->name));
-    dev->serial = serial_open(address, SERIAL_BAUDS_115200);
-    
-    if(dev->serial == NULL)
-        return;
-    
-    cmd_mgr_send_cmd_start(&dev->mgr, kGetInfo);
-    av_device_commit_output(dev);
+    lacf_strlcpy(dev->name, "<no name received>", sizeof(dev->name));
+    av_device_try_connect(dev);
 }
 
 const char *av_device_get_address(const av_device_t *dev) {
     return dev->address;
 }
 
-bool av_device_is_connected(const av_device_t *dev);
-bool av_device_try_connect(const av_device_t *dev);
+bool av_device_is_connected(const av_device_t *dev) {
+    return dev->serial != NULL;
+}
+
+bool av_device_try_connect(av_device_t *dev) {
+    if(dev->serial != NULL)
+        return true;
+    
+    dev->serial = serial_open(dev->address, SERIAL_BAUDS_115200);
+    
+    if(dev->serial == NULL)
+        return false;
+    
+    cmd_mgr_send_cmd_start(&dev->mgr, kGetInfo);
+    av_device_commit_output(dev);
+    return true;
+}
 
 // MARK: - Input Management
 
@@ -265,7 +292,6 @@ void av_device_update(av_device_t *dev) {
     // Get data from the serial connection
     char buf[512];
     int len = serial_read(dev->serial, buf, sizeof(buf));
-    cmd_mgr_proccess_input(&dev->mgr, buf, len);
     
     if(len < 0) {
         // Device has been lost. We need to do some stuff here
@@ -274,6 +300,8 @@ void av_device_update(av_device_t *dev) {
         dev->serial = NULL;
         return;
     }
+    
+    cmd_mgr_proccess_input(&dev->mgr, buf, len);
     
     // Feed data to the command manager to actually process stuff
     int16_t cmd = 0;

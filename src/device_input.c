@@ -56,26 +56,12 @@ void callback_encoder(av_device_t *dev) {
     
     switch(ev) {
     case EV_DOWN_FAST:
-        if(encoder->cmd_dn.ref != NULL) {
-            XPLMCommandOnce(encoder->cmd_dn.ref);
-            XPLMCommandOnce(encoder->cmd_dn.ref);
-        }
-        break;
     case EV_DOWN:
-        if(encoder->cmd_dn.ref != NULL) {
-            XPLMCommandOnce(encoder->cmd_dn.ref);
-        }
+        av_cmd_once(&encoder->cmd_dn);
         break;
     case EV_UP_FAST:
-        if(encoder->cmd_up.ref != NULL) {
-            XPLMCommandOnce(encoder->cmd_up.ref);
-            XPLMCommandOnce(encoder->cmd_up.ref);
-        }
-        break;
     case EV_UP:
-        if(encoder->cmd_dn.ref != NULL) {
-            XPLMCommandOnce(encoder->cmd_up.ref);
-        }
+        av_cmd_once(&encoder->cmd_up);
         break;
     }
 }
@@ -95,9 +81,9 @@ void callback_button(av_device_t *dev) {
         return;
     
     if(ev == 1)
-        XPLMCommandBegin(button->cmd.ref);
+        av_cmd_begin(&button->cmd);
     else
-        XPLMCommandEnd(button->cmd.ref);
+        av_cmd_end(&button->cmd);
 }
 
 void callback_mux(av_device_t *dev) {
@@ -119,9 +105,9 @@ void callback_mux(av_device_t *dev) {
         return;
     
     if(ev == 1)
-        XPLMCommandBegin(mux->cmd[pin].ref);
+        av_cmd_begin(&mux->cmd[pin]);
     else
-        XPLMCommandEnd(mux->cmd[pin].ref);
+        av_cmd_end(&mux->cmd[pin]);
 }
 
 void callback_info(av_device_t *dev) {
