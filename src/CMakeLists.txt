@@ -6,6 +6,7 @@ set(PLUGIN_SRC
     device.c
     device_cfg.c
     device_input.c
+    device_output.c
     settings.cpp
     xplane.c)
 set(PLUGIN_HDR

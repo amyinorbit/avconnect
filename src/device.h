@@ -11,6 +11,7 @@
 #define _MAPPING_H_
 
 #include "bindings/inputs.h"
+#include "bindings/outputs.h"
 #include <stdbool.h>
 #include <stdio.h>
 
@@ -40,6 +41,17 @@ av_in_mux_t *av_device_add_in_mux(av_device_t *dev);
 av_in_encoder_t *av_device_add_in_encoder_str(av_device_t *dev, const char *name);
 av_in_button_t *av_device_add_in_button_str(av_device_t *dev, const char *name);
 av_in_mux_t *av_device_add_in_mux_str(av_device_t *dev, const char *name);
+
+
+int av_device_get_out_count(const av_device_t *dev);
+av_out_t *av_device_get_out(av_device_t *dev, int idx);
+void av_device_delete_out(av_device_t *dev, int idx);
+
+av_out_sreg_t *av_device_add_out_sreg(av_device_t *dev);
+av_out_pwm_t *av_device_add_out_pwm(av_device_t *dev);
+
+av_out_sreg_t *av_device_add_out_sreg_id(av_device_t *dev, int id);
+av_out_pwm_t *av_device_add_out_pwm_id(av_device_t *dev, int id);
 
 void av_device_update(av_device_t *dev);
 

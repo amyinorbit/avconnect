@@ -16,17 +16,18 @@
 extern "C" {
 #endif
     
-#define AV_SHIFT_REG_MAX_PINS   (16)
+#define AV_SREG_MAX_PINS   (16)
     
 typedef enum {
+    AV_TYPE_INVALID,
     AV_TYPE_INT,
     AV_TYPE_FLOAT,
-    AV_TYPE_INVALID,
+    AV_TYPE_DOUBLE,
 } av_dr_type_t;
-    
+
 typedef enum {
-    AV_EQ_NEQ,
-    AV_EQ,
+    AV_OP_NEQ,
+    AV_OP_EQ,
     AV_OP_LT,
     AV_OP_LTEQ,
     AV_OP_GT,
@@ -34,16 +35,35 @@ typedef enum {
     AV_OP_TEST,
 } av_cmp_op_t;
 
+static const char *av_cmp_str[] = {
+    [AV_OP_NEQ]     = "!=",
+    [AV_OP_EQ]      = "==",
+    [AV_OP_LT]      = "<",
+    [AV_OP_LTEQ]    = "<=",
+    [AV_OP_GT]      = ">",
+    [AV_OP_GTEQ]    = ">=",
+    [AV_OP_TEST]    = "&",
+};
+
+typedef enum {
+    AV_OP_MULT,
+    AV_OP_PLUS,
+    AV_OP_MINUS,
+} av_mod_op_t;
+
+static const char *av_mod_str[] = {
+    [AV_OP_MULT]    = "*",
+    [AV_OP_PLUS]    = "+",
+    [AV_OP_MINUS]   = "-",
+};
+
 typedef struct {
     char            path[128];
     bool            has_changed;
     bool            has_resolved;
     XPLMDataRef     ref;
     av_dr_type_t    type;
-    av_cmp_op_t     cmp_op;
-    float           cmp_val;
-    int             last_output;
-} av_dr_t;
+} av_dref_t;
 
 typedef enum {
     AV_OUT_PWM,
@@ -57,14 +77,32 @@ typedef struct {
 } av_out_t;
 
 typedef struct {
-    av_out_t        base;
-    av_dr_t         dr[AV_SHIFT_REG_MAX_PINS];
+    av_dref_t       dref;
+    av_cmp_op_t     cmp_op;
+    float           cmp_val;
+    int             last_out;
+} av_out_sreg_pin_t;
+
+typedef struct {
+    av_out_t            base;
+    av_out_sreg_pin_t   pins[AV_SREG_MAX_PINS];
 } av_out_sreg_t;
 
+typedef struct {
+    av_out_t            base;
+    av_dref_t           dref;
+    av_mod_op_t         mod_op;
+    float               mod_val;
+    int                 last_out;
+} av_out_pwm_t;
 
-static inline void av_dr_init(av_dr_t *dr) {
-    memset(dr, 0, sizeof(*dr));
-    dr->has_changed = true;
+
+static inline void av_dref_init(av_dref_t *dref) {
+    dref->path[0] = '\0';
+    dref->has_resolved = false;
+    dref->has_changed = true;
+    dref->ref = NULL;
+    dref->type = AV_TYPE_INVALID;
 }
 
 #ifdef __cplusplus

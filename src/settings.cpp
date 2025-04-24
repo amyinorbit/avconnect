@@ -182,8 +182,80 @@ private:
         }
     }
     
+#define COUNTOF(ar) (sizeof(ar) / sizeof(*ar))
+    
+    void buildPWMPad(av_out_pwm_t *pwm) {
+        drefField("dataref", &pwm->dref);
+        // ImGui::SameLine();
+        dropdown("##mod_op", av_mod_str, COUNTOF(av_mod_str), (int&)pwm->mod_op);
+        // ImGui::SameLine();
+        ImGui::InputFloat("##mod_val", &pwm->mod_val);
+    }
+    
+    void buildShiftRegPad(av_out_sreg_t *sreg) {
+        for(int i = 0; i < AV_SREG_MAX_PINS; ++i) {
+            ImGui::PushID(i);
+            drefField("dataref", &sreg->pins[i].dref);
+            // ImGui::SameLine();
+            dropdown("##cmp_op", av_cmp_str, COUNTOF(av_cmp_str), (int&)sreg->pins[i].cmp_op);
+            // ImGui::SameLine();
+            ImGui::InputFloat("##cmp_val", &sreg->pins[i].cmp_val);
+            ImGui::PopID();
+        }
+    }
+    
     void buildOutputsTab(av_device_t *sel_device) {
-        UNUSED(sel_device);
+        if(sel_device == nullptr)
+            return;
+        
+        int to_delete = -1;
+        for(int i = 0; i < av_device_get_out_count(sel_device); ++i) {
+            av_out_t *out = av_device_get_out(sel_device, i);
+            
+            ImGui::PushID(i);
+            const char *header = "Output";
+            switch(out->type) {
+            case AV_OUT_PWM: header = "PWM Output"; break;
+            case AV_OUT_SHIFT_REG: header = "Shift Register"; break;
+            }
+            
+            if(!ImGui::CollapsingHeader(header)) {
+                ImGui::PopID();
+                continue;
+            }
+            
+            ImGui::InputText("Name", out->name, sizeof(out->name));
+            ImGui::InputInt("ID", &out->id);
+            
+            switch(out->type) {
+            case AV_OUT_PWM:
+                buildPWMPad((av_out_pwm_t *)out);
+                break;
+            case AV_OUT_SHIFT_REG:
+                buildShiftRegPad((av_out_sreg_t *)out);
+                break;
+            }
+            
+            if(ImGui::Button("Delete")) {
+                to_delete = i;
+            }
+            
+            ImGui::PopID();
+        }
+        
+        ImGui::Separator();
+        
+        if(to_delete >= 0 && to_delete < av_device_get_out_count(sel_device)) {
+            av_device_delete_out(sel_device, to_delete);
+        }
+        
+        if(ImGui::Button("Add PWM Output")) {
+            av_device_add_out_pwm(sel_device);
+        }
+        ImGui::SameLine();
+        if(ImGui::Button("Add Shift Register")) {
+            av_device_add_out_sreg(sel_device);
+        }
     }
     
     void portDropdown(av_device_t *dev) {
@@ -208,6 +280,28 @@ private:
             av_cmd_end(cmd);
             cmd->has_changed = true;
         }
+    }
+    
+    void dropdown(const char *label, const char **options, int count, int& sel) {
+        int value = -1;
+        if(ImGui::BeginCombo(label, options[sel])) {
+            for(int i = 0; i < count; ++i) {
+                if(ImGui::Selectable(options[i], i == sel)) {
+                    value = i;
+                }
+            }
+            ImGui::EndCombo();
+        }
+        if(value >= 0)
+            sel = value;
+    }
+    
+    void drefField(const char *label, av_dref_t *dref) {
+        if(!ImGui::InputText(label, dref->path, sizeof(dref->path)))
+            return;
+        dref->has_changed = true;
+        dref->has_resolved = false;
+        dref->type = AV_TYPE_INVALID;
     }
     
     static constexpr int max_ports = 64;
