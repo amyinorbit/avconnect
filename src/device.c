@@ -65,7 +65,9 @@ static void end_commands(av_device_t *dev) {
 }
 
 void av_device_destroy(av_device_t *dev) {
+    av_device_out_reset(dev);
     end_commands(dev);
+    
     for(int i = 0; i < dev->inputs.count; ++i)
         free(dev->inputs.data[i]);
     for(int i = 0; i < dev->outputs.count; ++i)

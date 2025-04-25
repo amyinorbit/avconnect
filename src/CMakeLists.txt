@@ -29,4 +29,4 @@ target_link_libraries(avconnect PUBLIC serial toml xsb acfutils xpwidgets xplm)
 
 add_executable(demo utils/str_buf.c utils/cmd_mgr.c utils/str_buf.h utils/cmd_mgr.h main.c)
 target_compile_options(demo PUBLIC -Wall -Wextra  -Werror)
-target_link_libraries(demo PUBLIC serial)
+target_link_libraries(demo PUBLIC serial acfutils)

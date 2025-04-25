@@ -129,6 +129,7 @@ static void parse_pwm(av_device_t *dev, toml_table_t *cpwm) {
     lacf_strlcpy(pwm->dref.path, dref.u.s, sizeof(pwm->dref.path));
     pwm->mod_op = mod;
     pwm->mod_val = val.u.d;
+    pwm->last_out = -1;
     
 out:
     if(dref.ok) free(dref.u.s);
@@ -172,6 +173,7 @@ static void parse_sreg(av_device_t *dev, toml_table_t *csreg) {
     lacf_strlcpy(pin->dref.path, dref.u.s, sizeof(pin->dref.path));
     pin->cmp_op = cmp;
     pin->cmp_val = val.u.d;
+    pin->last_out = -1;
     
 out:
     if(dref.ok) free(dref.u.s);
@@ -248,6 +250,7 @@ void do_read_conf(char *path) {
         }
         
         free(address.u.s);
+        av_device_out_reset(dev);
     }
     
 out:

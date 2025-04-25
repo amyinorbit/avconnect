@@ -333,7 +333,9 @@ private:
         ImGui::Text("%s", label);
         ImGui::TableNextColumn();
         
+        bool has_color = false;
         if(cmd->has_resolved) {
+            has_color = true;
             ImGui::PushStyleColor(ImGuiCol_FrameBg, IM_COL32(0, 255, 0, 80));
         }
         
@@ -346,7 +348,7 @@ private:
         }
         ImGui::PopItemWidth();
         
-        if(cmd->has_resolved) {
+        if(has_color) {
             ImGui::PopStyleColor();
         }
     }
@@ -371,7 +373,9 @@ private:
         ImGui::Text("%s", label);
         ImGui::TableNextColumn();
         
+        bool has_color = false;
         if(dref->has_resolved) {
+            has_color = true;
             ImGui::PushStyleColor(ImGuiCol_FrameBg, IM_COL32(0, 255, 0, 80));
         }
         
@@ -383,7 +387,7 @@ private:
         }
         ImGui::PopItemWidth();
         
-        if(dref->has_resolved) {
+        if(has_color) {
             ImGui::PopStyleColor();
         }
     }

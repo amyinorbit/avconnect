@@ -42,7 +42,7 @@ av_in_encoder_t *av_device_add_in_encoder_str(av_device_t *dev, const char *name
 av_in_button_t *av_device_add_in_button_str(av_device_t *dev, const char *name);
 av_in_mux_t *av_device_add_in_mux_str(av_device_t *dev, const char *name);
 
-
+void av_device_out_reset(av_device_t *dev);
 int av_device_get_out_count(const av_device_t *dev);
 av_out_t *av_device_get_out(av_device_t *dev, int idx);
 void av_device_delete_out(av_device_t *dev, int idx);

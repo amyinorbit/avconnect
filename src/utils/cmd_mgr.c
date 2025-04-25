@@ -14,6 +14,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef CMD_MGR_DEBUG
+#define CMD_MGR_DEBUG 0
+#endif
+
+#if CMD_MGR_DEBUG
+#include <acfutils/log.h>
+#endif
+
 void cmd_mgr_init(cmd_mgr_t *mgr) {
     str_buf_init(&mgr->buf_in);
     str_buf_init(&mgr->buf_out);
@@ -40,6 +48,10 @@ int cmd_mgr_get_output(cmd_mgr_t *mgr, char *out, int cap) {
     memcpy(out, data, to_copy);
     out[to_copy] = '\0';
     str_buf_clear(&mgr->buf_out);
+    
+#if CMD_MGR_DEBUG
+    logMsg("out msg: %s", out);
+#endif
     return to_copy;
 }
 

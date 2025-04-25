@@ -11,7 +11,48 @@
 #include "cmd_ids.h"
 #include <acfutils/assert.h>
 
+static void commit_cmd(cmd_mgr_t *mgr, serial_t *serial);
+
 // MARK: - Output Management
+
+static void reset_pwm(av_device_t *dev, av_out_pwm_t *pwm) {
+    if(dev->serial == NULL)
+        return;
+    pwm->last_out = 0;
+    cmd_mgr_send_cmd_start(&dev->mgr, kSetPin);
+    cmd_mgr_send_arg_int(&dev->mgr, pwm->base.id);
+    cmd_mgr_send_arg_int(&dev->mgr, 0);
+    commit_cmd(&dev->mgr, dev->serial);
+}
+
+static void reset_sreg(av_device_t *dev, av_out_sreg_t *sreg) {
+    if(dev->serial == NULL)
+        return;
+    char cmd[AV_SREG_MAX_PINS * 4] = "";
+    int cmd_len = 0;
+    
+    for(int i = 0; i < AV_SREG_MAX_PINS; ++i) {
+        if(cmd_len > 0)
+            cmd[cmd_len++] = '|';
+        cmd_len += snprintf(cmd + cmd_len, sizeof(cmd) - cmd_len, "%d", i);
+        sreg->pins[i].last_out = 0;
+    }
+    cmd[cmd_len] = '\0';
+    
+    cmd_mgr_send_cmd_start(&dev->mgr, kSetShiftRegisterPins);
+    cmd_mgr_send_arg_int(&dev->mgr, sreg->base.id);
+    cmd_mgr_send_arg_cstr(&dev->mgr, cmd);
+    cmd_mgr_send_arg_int(&dev->mgr, 0);
+    commit_cmd(&dev->mgr, dev->serial);
+}
+
+
+void av_device_out_reset(av_device_t *dev) {
+    for(int i = 0; i < dev->pwms.count; ++i)
+        reset_pwm(dev, dev->pwms.data[i]);
+    for(int i = 0; i < dev->sregs.count; ++i)
+        reset_sreg(dev, dev->sregs.data[i]);
+}
 
 int av_device_get_out_count(const av_device_t *dev) {
     return dev->outputs.count;
@@ -223,17 +264,17 @@ void update_sreg(av_out_sreg_t *sreg, av_device_t *dev) {
         if(sreg->pins[i].last_out) {
             if(cmd_on_len > 0)
                 cmd_on[cmd_on_len++] = '|';
-            cmd_on_len += snprintf(cmd_on, sizeof(cmd_on) - cmd_on_len, "%d", i);
+            cmd_on_len += snprintf(cmd_on + cmd_on_len, sizeof(cmd_on) - cmd_on_len, "%d", i);
         } else {
             if(cmd_off_len > 0)
                 cmd_off[cmd_off_len++] = '|';
-            cmd_off_len += snprintf(cmd_off, sizeof(cmd_off) - cmd_off_len, "%d", i);
+            cmd_off_len += snprintf(cmd_off + cmd_off_len, sizeof(cmd_off) - cmd_off_len, "%d", i);
         }
     }
     
     if(cmd_on_len > 0) {
         cmd_mgr_send_cmd_start(&dev->mgr, kSetShiftRegisterPins);
-        cmd_mgr_send_arg_int(&dev->mgr, 0); // TODO: let user assign module ID
+        cmd_mgr_send_arg_int(&dev->mgr, sreg->base.id);
         cmd_mgr_send_arg_cstr(&dev->mgr, cmd_on);
         cmd_mgr_send_arg_int(&dev->mgr, 1);
         commit_cmd(&dev->mgr, dev->serial);
@@ -241,7 +282,7 @@ void update_sreg(av_out_sreg_t *sreg, av_device_t *dev) {
     
     if(cmd_off_len > 0) {
         cmd_mgr_send_cmd_start(&dev->mgr, kSetShiftRegisterPins);
-        cmd_mgr_send_arg_int(&dev->mgr, 0); // TODO: let user assign module ID
+        cmd_mgr_send_arg_int(&dev->mgr, sreg->base.id);
         cmd_mgr_send_arg_cstr(&dev->mgr, cmd_off);
         cmd_mgr_send_arg_int(&dev->mgr, 0);
         commit_cmd(&dev->mgr, dev->serial);
