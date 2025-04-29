@@ -72,7 +72,7 @@ void avconnect_conf_check_reload(bool acf_specific) {
 void avconnect_conf_save(bool acf_specific) {
     UNUSED(acf_specific);
     
-    char *path = mkpathname(get_plane_dir(), "avconnect.toml", NULL);
+    char *path = mkpathname(acf_specific ? get_plane_dir() : get_conf_dir(), "avconnect.toml", NULL);
     FILE *out = fopen(path, "wb");
     if(out == NULL) {
         logMsg("unable to save configuration to `%s`: %s", path, strerror(errno));
@@ -81,11 +81,10 @@ void avconnect_conf_save(bool acf_specific) {
     }
     free(path);
     
-    fprintf(out, "# AvConnect configuration\n\n");
+    fprintf(out, "# AvConnect configuration\n");
     for(int i = 0; i < devices.count; ++i) {
         av_device_write(devices.data[i], out);
     }
-    fprintf(out, "\n# %d devices written\n\n", devices.count);
     fclose(out);
 }
 

@@ -34,7 +34,6 @@ public:
     
     virtual void buildInterface() override {
         
-        
         // ImGui::PushItemWidth(-1);
         if(ImGui::BeginTable("DeviceListLayout", 2)) {
         	ImGui::TableSetupColumn("Device List", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, 140);
@@ -43,14 +42,8 @@ public:
             ImGui::TableNextColumn();
         
             // ImGui::PushItemWidth(-1);
-            if(ImGui::Button("Add")) {
-                avconnect_device_add();
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("Read")) {
-                avconnect_conf_check_reload(true);
-            }
-            if(ImGui::BeginListBox("##Devices", ImVec2(-1, -2))) {
+            
+            if(ImGui::BeginListBox("##Devices", ImVec2(-1, -3 * ImGui::GetFrameHeightWithSpacing()))) {
                 
                 for(int i = 0; i < avconnect_get_device_count(); ++i) {
                     av_device_t *dev = avconnect_device_get(i);
@@ -60,6 +53,20 @@ public:
                 }
                 
                 ImGui::EndListBox();
+            }
+            if(ImGui::Button("Add", ImVec2(65, 0))) {
+                avconnect_device_add();
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Delete", ImVec2(-1, 0)) && sel_device_id >= 0 && sel_device_id < avconnect_get_device_count()) {
+                avconnect_device_delete(sel_device_id);
+                sel_device_id = -1;
+            }
+            if(ImGui::Button("Save (Aircraft)", ImVec2(-1, 0))) {
+                avconnect_conf_save(true);
+            }
+            if(ImGui::Button("Save (Global)", ImVec2(-1, 0))) {
+                avconnect_conf_save(false);
             }
             
             ImGui::TableNextColumn();
@@ -141,7 +148,6 @@ private:
             }
             
             if(ImGui::BeginTable("InputLayout", 2, ImGuiTableFlags_SizingStretchProp)) {
-                
                 ImGui::TableSetupColumn("Labels", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, 100);
                 ImGui::TableSetupColumn("Fields", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoSort);
                 ImGui::TableNextColumn();
@@ -190,18 +196,12 @@ private:
         if(ImGui::Button("Add Multiplexer")) {
             av_device_add_in_mux(sel_device);
         }
-        
-        if(ImGui::Button("Save configuration")) {
-            avconnect_conf_save(false);
-        }
     }
     
 #define COUNTOF(ar) (sizeof(ar) / sizeof(*ar))
     
     void buildPWMPad(av_out_pwm_t *pwm) {
         drefField("DataRef", &pwm->dref);
-        // ImGui::SameLine();
-        
         ImGui::TableNextColumn();
         ImGui::PushItemWidth(-1);
         dropdown("##mod_op", av_mod_str, COUNTOF(av_mod_str), (int&)pwm->mod_op);
@@ -251,7 +251,6 @@ private:
             }
             
             if(ImGui::BeginTable("InputLayout", 2, ImGuiTableFlags_SizingStretchProp)) {
-                
                 ImGui::TableSetupColumn("Labels", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, 100);
                 ImGui::TableSetupColumn("Fields", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoSort);
                 ImGui::TableNextColumn();
@@ -268,9 +267,7 @@ private:
                 ImGui::EndTable();
             }
             
-            
             if(ImGui::BeginTable("OutputDRLayout", 4, ImGuiTableFlags_SizingStretchProp)) {
-                
                 ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, 100);
                 ImGui::TableSetupColumn("Dataref", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoSort);
                 ImGui::TableSetupColumn("Operator", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort, 60);
@@ -284,7 +281,6 @@ private:
                     buildShiftRegPad((av_out_sreg_t *)out);
                     break;
                 }
-                
                 
                 ImGui::EndTable();
             }

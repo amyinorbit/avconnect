@@ -55,7 +55,7 @@ static void get_paths() {
 	XPLMGetPluginInfo(XPLMGetMyID(), NULL, plugin_dir, NULL, NULL);
     XPLMGetNthAircraftModel(XPLM_USER_AIRCRAFT, name, plane_dir);
     
-    snprintf(conf_dir, sizeof(conf_dir), "%s/Output/Preferences", xplane_dir);
+    snprintf(conf_dir, sizeof(conf_dir), "%s/Output/preferences", xplane_dir);
     
 #if	IBM
 	fix_pathsep(xplane_dir);

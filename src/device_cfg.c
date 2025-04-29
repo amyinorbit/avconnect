@@ -20,8 +20,8 @@
 //     fprintf(out, "[%s]\n\n", name);
 // }
 
-static inline void write_table_array(FILE *out, const char *array) {
-    fprintf(out, "[[%s]]\n\n", array);
+static inline void write_table_array(FILE *out, const char *array, const char *after) {
+    fprintf(out, "[[%s]]%s", array, after);
 }
 
 static inline void write_string(FILE *out, const char *key, const char *value, const char *after) {
@@ -99,9 +99,8 @@ static void write_sreg(FILE *out, const av_out_sreg_t *sreg) {
 void av_device_write(const av_device_t *dev, FILE *out) {
     ASSERT(out != NULL);
     
-    write_table_array(out, "device");
+    write_table_array(out, "device", "\n");
     write_string(out, "port", dev->address, "\n");
-    write_string(out, "id", dev->serial_no, "\n");
     
     fprintf(out, "in_encoders = [\n");
     for(int i = 0; i < dev->encoders.count; ++i) {

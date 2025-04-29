@@ -15,7 +15,7 @@
 #include <stddef.h>
 #include "str_buf.h"
 
-#define CMD_MGR_DEBUG 1
+#define CMD_MGR_DEBUG 0
 
 #ifdef __cplusplus
 extern "C" {
