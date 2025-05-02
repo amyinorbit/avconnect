@@ -25,6 +25,7 @@
 #include <acfutils/glew.h>
 #include <acfutils/helpers.h>
 #include <acfutils/log.h>
+#include <acfutils/paste.h>
 
 #include "xplane.h"
 #include "avconnect.h"
@@ -141,6 +142,8 @@ PLUGIN_API int XPluginEnable(void) {
     int menu_item = XPLMAppendMenuItem(plugins, "AvConnect", NULL, 0);
     plugin_menu = XPLMCreateMenu("AvConnect", plugins, menu_item, menu_handler, NULL);
     XPLMAppendMenuItem(plugin_menu, "Reload Plugins", (void *)MENU_RELOAD, 0);
+    
+    paste_init();
     avconnect_init();
     avconnect_conf_check_reload(false);
     return 1;
@@ -148,6 +151,7 @@ PLUGIN_API int XPluginEnable(void) {
 
 PLUGIN_API void XPluginDisable(void) {
     avconnect_fini();
+    paste_fini();
     XPLMDestroyMenu(plugin_menu);
 }
 

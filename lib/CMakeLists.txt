@@ -66,4 +66,4 @@ set_target_properties(toml PROPERTIES
     POSITION_INDEPENDENT_CODE ON
 )
 
-add_subdirectory(mscript)
+# add_subdirectory(mscript)

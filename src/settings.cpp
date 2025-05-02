@@ -14,6 +14,7 @@
 #include <serial/serial.h>
 #include <ImgWindow.h>
 #include <acfutils/helpers.h>
+#include <acfutils/paste.h>
 
 class Settings : public ImgWindow {
 public:
@@ -329,20 +330,31 @@ private:
         ImGui::Text("%s", label);
         ImGui::TableNextColumn();
         
+        bool change = false;
+        
         bool has_color = false;
         if(cmd->has_resolved) {
             has_color = true;
             ImGui::PushStyleColor(ImGuiCol_FrameBg, IM_COL32(0, 255, 0, 80));
         }
         
-        char id[64];
-        snprintf(id, sizeof(id), "##%s", label);
+        char button_id[64];
+        snprintf(button_id, sizeof(button_id), "Paste##paste_%s", label);
+        if(ImGui::Button(button_id)) {
+            change = paste_get_str(cmd->path, sizeof(cmd->path));
+        }
+        ImGui::SameLine();
         ImGui::PushItemWidth(-1);
-        if(ImGui::InputText(id, cmd->path, sizeof(cmd->path))) {
+        
+        char label_id[64];
+        snprintf(label_id, sizeof(label_id), "##%s", label);
+        change |= ImGui::InputText(label_id, cmd->path, sizeof(cmd->path));
+        ImGui::PopItemWidth();
+
+        if(change) {
             av_cmd_end(cmd);
             cmd->has_changed = true;
         }
-        ImGui::PopItemWidth();
         
         if(has_color) {
             ImGui::PopStyleColor();
@@ -369,20 +381,28 @@ private:
         ImGui::Text("%s", label);
         ImGui::TableNextColumn();
         
+        bool change = false;
         bool has_color = false;
+        
         if(dref->has_resolved) {
             has_color = true;
             ImGui::PushStyleColor(ImGuiCol_FrameBg, IM_COL32(0, 255, 0, 80));
         }
         
+        if(ImGui::Button("Paste")) {
+            change = paste_get_str(dref->path, sizeof(dref->path));
+        }
+        ImGui::SameLine();
+        
         ImGui::PushItemWidth(-1);
-        if(ImGui::InputText(label, dref->path, sizeof(dref->path))) {
+        change |= ImGui::InputText(label, dref->path, sizeof(dref->path));
+        ImGui::PopItemWidth();
+
+        if(change) {
             dref->has_changed = true;
             dref->has_resolved = false;
             dref->type = AV_TYPE_INVALID;
         }
-        ImGui::PopItemWidth();
-        
         if(has_color) {
             ImGui::PopStyleColor();
         }
