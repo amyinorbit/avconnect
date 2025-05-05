@@ -73,11 +73,16 @@ public:
             ImGui::TableNextColumn();
             if(sel_device_id >= 0) {
                 av_device_t *sel_device = avconnect_device_get(sel_device_id);
+                    
                 ImGui::Text("%s", av_device_get_name(sel_device));
                 portDropdown(sel_device);
                 ImGui::SameLine();
                 if(ImGui::Button("Scan")) {
                     updatePorts();
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Request Config")) {
+                    av_device_req_config(sel_device);
                 }
                 ImGui::BeginTabBar("Bindings");
                 if(ImGui::BeginTabItem("Inputs")) {

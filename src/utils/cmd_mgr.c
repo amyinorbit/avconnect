@@ -90,6 +90,9 @@ void cmd_mgr_send_cmd_commit(cmd_mgr_t *mgr) {
 
 void cmd_mgr_proccess_input(cmd_mgr_t *mgr, const char *str, int len) {
     str_buf_push_back(&mgr->buf_in, str, len);
+#if CMD_MGR_DEBUG
+    logMsg("in msg: %s", mgr->buf_in.data);
+#endif
 }
 
 static char *skip_white_space(char *str) {
@@ -154,7 +157,12 @@ int16_t cmd_mgr_get_cmd(cmd_mgr_t *mgr) {
     mgr->cmd_end = get_cmd_end(str);
     if(mgr->cmd_end == NULL)
         return -1;
-    return cmd_mgr_get_arg_int(mgr);
+    int16_t cmd = cmd_mgr_get_arg_int(mgr);
+// #if CMD_MGR_DEBUG
+//     int len = (mgr->cmd_end - str);
+//     logMsg("in msg: %.*s", len, str);
+// #endif
+    return cmd;
 }
 
 int16_t cmd_mgr_get_arg_int(cmd_mgr_t *mgr) {

@@ -110,7 +110,29 @@ void callback_mux(av_device_t *dev) {
         av_cmd_end(&mux->cmd[pin]);
 }
 
+static void callback_config(av_device_t *dev) {
+    int len = cmd_mgr_get_arg_str(&dev->mgr, NULL, 0);
+    if(len <= 0)
+        return;
+    
+    char *str = safe_calloc(len+1, 1);
+    len = cmd_mgr_get_arg_str(&dev->mgr, str, len+1);
+    str[len] = '\0';
+    
+    logMsg("received config: %s", str);
+    parse_config(dev, str);
+}
+
 void callback_info(av_device_t *dev) {
+    
+    time_t req_time = dev->config_req_time;
+    time_t now = time(0L);
+    dev->config_req_time = 0;
+    if(now >= req_time && now < req_time + CONFIG_TIMEOUT) {
+        callback_config(dev);
+        dev->config_req_time = 0;
+        return;
+    }
     
     char buf_ignore[16];
     
@@ -118,11 +140,6 @@ void callback_info(av_device_t *dev) {
     cmd_mgr_get_arg_str(&dev->mgr, dev->name, sizeof(dev->name));
     cmd_mgr_get_arg_str(&dev->mgr, dev->serial_no, sizeof(dev->serial_no));
     cmd_mgr_skip_cmd(&dev->mgr); // Ignore <> and <>
-}
-
-void callback_config(av_device_t *dev) {
-    UNUSED(dev);
-    
 }
 
 // MARK: - Input Management

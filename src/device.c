@@ -38,6 +38,7 @@ av_device_t *av_device_new() {
     cmd_mgr_init(&dev->mgr);
     memset(dev->callbacks, 0, sizeof(dev->callbacks));
     
+    dev->config_req_time = 0;
 
     dev->callbacks[kEncoderChange] = callback_encoder;
     dev->callbacks[kButtonChange] = callback_button;
@@ -64,14 +65,17 @@ static void end_commands(av_device_t *dev) {
     }
 }
 
-void av_device_destroy(av_device_t *dev) {
+void clear_bindings(av_device_t *dev) {
     av_device_out_reset(dev);
     end_commands(dev);
-    
     for(int i = 0; i < dev->inputs.count; ++i)
         free(dev->inputs.data[i]);
     for(int i = 0; i < dev->outputs.count; ++i)
         free(dev->outputs.data[i]);
+}
+
+void av_device_destroy(av_device_t *dev) {
+    clear_bindings(dev);
     
     cmd_mgr_fini(&dev->mgr);
     input_buf_fini(&dev->inputs);
@@ -137,6 +141,18 @@ bool av_device_try_connect(av_device_t *dev) {
     return true;
 }
 
+
+void av_device_req_config(av_device_t *dev) {
+    if(dev->serial == NULL)
+        return;
+    dev->config_req_time = time(0L);
+    char buf[128];
+    cmd_mgr_send_cmd_start(&dev->mgr, kGetConfig);
+    cmd_mgr_send_cmd_commit(&dev->mgr);
+    size_t len = cmd_mgr_get_output(&dev->mgr, buf, sizeof(buf));
+    serial_write(dev->serial, buf, len);
+}
+
 // MARK: - Device update
 
 void av_device_update(av_device_t *dev) {
@@ -173,11 +189,12 @@ void av_device_update(av_device_t *dev) {
         return;
     }
     
-    cmd_mgr_proccess_input(&dev->mgr, buf, len);
+    if(len > 0)
+        cmd_mgr_proccess_input(&dev->mgr, buf, len);
     
     // Feed data to the command manager to actually process stuff
     int16_t cmd = 0;
-    if((cmd = cmd_mgr_get_cmd(&dev->mgr)) >= 0) {
+    while((cmd = cmd_mgr_get_cmd(&dev->mgr)) >= 0) {
         if(cmd < MAX_CMD_CB && dev->callbacks[cmd] != NULL) {
             dev->callbacks[cmd](dev);
         }

@@ -16,8 +16,10 @@
 #include "utils/buffers.h"
 #include <serial/serial.h>
 #include <acfutils/helpers.h>
+#include <time.h>
 
 #define MAX_CMD_CB      (34)
+#define CONFIG_TIMEOUT  (10)
 
 DECLARE_BUFFER(encoder, av_in_encoder_t *);
 DECLARE_BUFFER(button, av_in_button_t *);
@@ -48,6 +50,8 @@ struct av_device_t {
     sreg_buf_t          sregs;
     pwm_buf_t           pwms;
     
+    time_t              config_req_time;
+    
     cmd_cb_t            callbacks[MAX_CMD_CB];
 };
 
@@ -65,5 +69,8 @@ void update_mux(av_in_mux_t *mux);
 bool resolve_dref(av_dref_t *dref);
 void update_sreg(av_out_sreg_t *sreg, av_device_t *dev);
 void update_pwm(av_out_pwm_t *pwm, av_device_t *dev);
+
+void clear_bindings(av_device_t *dev);
+void parse_config(av_device_t *dev, char *cfg);
 
 #endif /* ifndef _DEVICE_IMPL_H_ */
