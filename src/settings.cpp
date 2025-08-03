@@ -442,8 +442,6 @@ void settings_init() {
     VERIFY(show_settings);
     XPLMRegisterCommandHandler(show_settings, handle_show, false, nullptr);
     menu_item = XPLMAppendMenuItemWithCommand(get_plugin_menu(), "Settings…", show_settings);
-    
-    settings_open();
 }
 
 void settings_fini() {
